@@ -129,7 +129,8 @@
             <tr 
               v-for="relatorio in relatoriosOrdenados" 
               :key="relatorio.ticket_number"
-              class="border-b border-border/50 hover:bg-muted/30 transition-colors"
+              @click="abrirModal(relatorio)"
+              class="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
             >
               <!-- Número do ticket -->
               <td class="py-3 px-3">
@@ -208,6 +209,139 @@
         </table>
       </div>
     </div>
+
+    <!-- Modal de Detalhes do Atendimento -->
+    <div 
+      v-if="modalAberto" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click="fecharModal"
+    >
+      <div 
+        class="bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        @click.stop
+      >
+        <!-- Header do Modal -->
+        <div class="sticky top-0 bg-background border-b border-border p-6 flex items-center justify-between">
+          <div>
+            <h3 class="text-xl font-semibold text-foreground">Detalhes do Atendimento</h3>
+            <p class="text-sm text-muted-foreground mt-1">Ticket #{{ atendimentoSelecionado?.ticket_number }}</p>
+          </div>
+          <button 
+            @click="fecharModal"
+            class="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <font-awesome-icon icon="times" class="w-6 h-6" />
+          </button>
+        </div>
+
+        <!-- Conteúdo do Modal -->
+        <div class="p-6 space-y-6" v-if="atendimentoSelecionado">
+          <!-- Informações Principais -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <h4 class="text-lg font-medium text-foreground border-b border-border pb-2">Informações do Atendimento</h4>
+              
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Número do Ticket</label>
+                  <p class="text-foreground font-mono">{{ atendimentoSelecionado.ticket_number }}</p>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Nome do Agente</label>
+                  <p class="text-foreground">{{ atendimentoSelecionado.agent_name }}</p>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Tempo de Serviço</label>
+                  <p class="text-foreground">{{ atendimentoSelecionado.service_time || 'Não informado' }}</p>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Início do Atendimento</label>
+                  <p class="text-foreground">{{ formatarData(atendimentoSelecionado.service_start_time) }}</p>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Pontuação do Serviço</label>
+                  <p class="text-foreground">{{ atendimentoSelecionado.service_score || 'Não avaliado' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <h4 class="text-lg font-medium text-foreground border-b border-border pb-2">Informações do Cliente</h4>
+              
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Nome do Contato</label>
+                  <p class="text-foreground">{{ atendimentoSelecionado.contact_name || 'Não informado' }}</p>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Telefone do Contato</label>
+                  <p class="text-foreground font-mono">{{ atendimentoSelecionado.contact_phone || 'Não informado' }}</p>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Classificação do Serviço</label>
+                  <p class="text-foreground">{{ atendimentoSelecionado.service_classification || 'Não classificado' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção de Textos Longos -->
+          <div class="space-y-6">
+            <div>
+              <h4 class="text-lg font-medium text-foreground border-b border-border pb-2 mb-4">Detalhes da Solicitação</h4>
+              
+              <div class="space-y-4">
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Solicitação do Cliente</label>
+                  <div class="mt-2 p-4 bg-muted/30 rounded-lg">
+                    <p class="text-foreground whitespace-pre-wrap">{{ atendimentoSelecionado.contact_request || 'Não informado' }}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Solução do Agente</label>
+                  <div class="mt-2 p-4 bg-muted/30 rounded-lg">
+                    <p class="text-foreground whitespace-pre-wrap">{{ atendimentoSelecionado.agent_solution || 'Não informado' }}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Observações do Cliente</label>
+                  <div class="mt-2 p-4 bg-muted/30 rounded-lg">
+                    <p class="text-foreground whitespace-pre-wrap">{{ atendimentoSelecionado.customer_note || 'Não informado' }}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-muted-foreground">Resumo do Atendimento</label>
+                  <div class="mt-2 p-4 bg-muted/30 rounded-lg">
+                    <p class="text-foreground whitespace-pre-wrap">{{ atendimentoSelecionado.service_summary || 'Não informado' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer do Modal -->
+        <div class="sticky bottom-0 bg-background border-t border-border p-6">
+          <div class="flex justify-end">
+            <button 
+              @click="fecharModal"
+              class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -255,9 +389,29 @@ const filtros = ref<Filtros>({
   classificacao: ''
 })
 
-// Carregar relatórios quando o componente for montado
+// Estados do modal
+const modalAberto = ref(false)
+const atendimentoSelecionado = ref<AtendimentoPizarro | null>(null)
+
+// Carregar relatórios e configurar listeners quando o componente for montado
 onMounted(() => {
   fetchRelatorios()
+  
+  // Listener para tecla ESC fechar modal
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && modalAberto.value) {
+      fecharModal()
+    }
+  }
+  
+  window.addEventListener('keydown', handleKeydown)
+  
+  // Cleanup no unmount
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown)
+    // Garantir que o scroll seja restaurado
+    document.body.style.overflow = 'auto'
+  })
 })
 
 // Computed para detectar se há filtros ativos
@@ -367,5 +521,37 @@ function truncateText(text: string | null, maxLength: number): string {
   if (!text) return '-'
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
+}
+
+// Funções do modal
+function abrirModal(atendimento: AtendimentoPizarro) {
+  atendimentoSelecionado.value = atendimento
+  modalAberto.value = true
+  // Prevenir scroll do body quando modal estiver aberto
+  document.body.style.overflow = 'hidden'
+}
+
+function fecharModal() {
+  modalAberto.value = false
+  atendimentoSelecionado.value = null
+  // Restaurar scroll do body
+  document.body.style.overflow = 'auto'
+}
+
+// Função para formatar data
+function formatarData(data: string | null): string {
+  if (!data) return 'Não informado'
+  try {
+    return new Date(data).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (e) {
+    return data
+  }
 }
 </script>
