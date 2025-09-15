@@ -135,6 +135,7 @@
             <tr 
               v-for="relatorio in relatoriosOrdenados" 
               :key="relatorio.ticket_number"
+              v-memo="[relatorio.ticket_number, relatorio.agent_name, relatorio.contact_name]"
               @click="abrirModal(relatorio)"
               class="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
             >
@@ -421,7 +422,7 @@ watch(() => filtros.value.agenteOuContato, (novoValor) => {
   debounceTimerAgente = setTimeout(() => {
     filtrosDebounce.value.agenteOuContato = novoValor
     processandoFiltro.value = false
-  }, 1200) // 1.2 segundos para dar tempo ao usuário terminar de digitar
+  }, 300) // Reduzido para 300ms para carregamento mais rápido
 }, { immediate: true })
 
 watch(() => filtros.value.classificacao, (novoValor) => {
@@ -430,7 +431,7 @@ watch(() => filtros.value.classificacao, (novoValor) => {
   debounceTimerCliente = setTimeout(() => {
     filtrosDebounce.value.classificacao = novoValor
     processandoFiltro.value = false
-  }, 1200) // 1.2 segundos para dar tempo ao usuário terminar de digitar
+  }, 300) // Reduzido para 300ms para carregamento mais rápido
 }, { immediate: true })
 
 // Para as datas não precisamos de debounce, aplicar imediatamente
@@ -465,111 +466,78 @@ onMounted(() => {
 
 // Computed para detectar se há filtros ativos
 const filtrosAplicados = computed(() => {
-  const aplicados = filtros.value.dataInicial !== '' || 
+  return filtros.value.dataInicial !== '' || 
          filtros.value.dataFinal !== '' || 
          filtrosDebounce.value.agenteOuContato !== '' || 
          filtrosDebounce.value.classificacao !== ''
-  console.log('🔍 Filtros aplicados:', aplicados, { 
-    datas: { inicial: filtros.value.dataInicial, final: filtros.value.dataFinal },
-    textos: { agente: filtrosDebounce.value.agenteOuContato, cliente: filtrosDebounce.value.classificacao }
-  })
-  return aplicados
 })
 
 // Computed para relatórios filtrados
 const relatoriosFiltrados = computed(() => {
-  console.log('📊 Dados originais:', relatoriosData.value.length, 'registros')
   let resultado = relatoriosData.value
 
+  // Filtro de data inicial - otimizado
   if (filtros.value.dataInicial) {
-    console.log('🗓️ Filtro data inicial:', filtros.value.dataInicial)
-    const tamanhoAntes = resultado.length
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
       try {
-        // Extrair apenas a parte da data do service_start_time
-        // Formato esperado: "30/08/2025 11:07" ou "2025-08-30 11:07"
         let dataAtendimento = r.service_start_time
         
-        // Se o formato está DD/MM/YYYY, converter para YYYY-MM-DD para comparação
         if (dataAtendimento.includes('/')) {
           const partes = dataAtendimento.split(' ')[0]?.split('/')
           if (partes && partes.length === 3) {
             dataAtendimento = `${partes[2]}-${partes[1]!.padStart(2, '0')}-${partes[0]!.padStart(2, '0')}`
           }
         } else {
-          // Se já está em formato YYYY-MM-DD HH:mm, pegar só a data
           dataAtendimento = dataAtendimento.split(' ')[0]!
         }
         
-        const dataFiltro = filtros.value.dataInicial
-        
-        console.log('Comparando datas inicial:', dataAtendimento, '>=', dataFiltro)
-        return dataAtendimento >= dataFiltro
+        return dataAtendimento >= filtros.value.dataInicial
       } catch (e) {
-        console.error('Erro ao processar data inicial:', e)
         return false
       }
     })
-    console.log('📅 Após filtro data inicial:', tamanhoAntes, '->', resultado.length)
   }
 
+  // Filtro de data final - otimizado
   if (filtros.value.dataFinal) {
-    console.log('🗓️ Filtro data final:', filtros.value.dataFinal)
-    const tamanhoAntes = resultado.length
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
       try {
-        // Extrair apenas a parte da data do service_start_time
-        // Formato esperado: "30/08/2025 11:07" ou "2025-08-30 11:07"
         let dataAtendimento = r.service_start_time
         
-        // Se o formato está DD/MM/YYYY, converter para YYYY-MM-DD para comparação
         if (dataAtendimento.includes('/')) {
           const partes = dataAtendimento.split(' ')[0]?.split('/')
           if (partes && partes.length === 3) {
             dataAtendimento = `${partes[2]}-${partes[1]!.padStart(2, '0')}-${partes[0]!.padStart(2, '0')}`
           }
         } else {
-          // Se já está em formato YYYY-MM-DD HH:mm, pegar só a data
           dataAtendimento = dataAtendimento.split(' ')[0]!
         }
         
-        const dataFiltro = filtros.value.dataFinal
-        
-        console.log('Comparando datas final:', dataAtendimento, '<=', dataFiltro)
-        return dataAtendimento <= dataFiltro
+        return dataAtendimento <= filtros.value.dataFinal
       } catch (e) {
-        console.error('Erro ao processar data final:', e)
         return false
       }
     })
-    console.log('📅 Após filtro data final:', tamanhoAntes, '->', resultado.length)
   }
 
-  // Usar debounce para filtros de texto
+  // Filtro de agente - otimizado com debounce
   if (filtrosDebounce.value.agenteOuContato) {
-    console.log('👤 Filtro agente:', filtrosDebounce.value.agenteOuContato)
-    const tamanhoAntes = resultado.length
     const termo = filtrosDebounce.value.agenteOuContato.toLowerCase()
     resultado = resultado.filter(r => 
       r.agent_name && r.agent_name.toLowerCase().includes(termo)
     )
-    console.log('👤 Após filtro agente:', tamanhoAntes, '->', resultado.length)
   }
 
+  // Filtro de cliente - otimizado com debounce
   if (filtrosDebounce.value.classificacao) {
-    console.log('👥 Filtro nome do cliente:', filtrosDebounce.value.classificacao)
-    const tamanhoAntes = resultado.length
     const termo = filtrosDebounce.value.classificacao.toLowerCase()
     resultado = resultado.filter(r =>
-      r.contact_name && 
-      r.contact_name.toLowerCase().includes(termo)
+      r.contact_name && r.contact_name.toLowerCase().includes(termo)
     )
-    console.log('👥 Após filtro nome do cliente:', tamanhoAntes, '->', resultado.length)
   }
 
-  console.log('✅ Resultado final filtrado:', resultado.length, 'registros')
   return resultado
 })
 

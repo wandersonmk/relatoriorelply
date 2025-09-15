@@ -37,10 +37,7 @@ export const useRelatorios = () => {
   
   // Função para buscar todos os registros da tabela Atendimentos_Pizarro
   const fetchRelatorios = async () => {
-    console.log('🔍 Iniciando busca de registros de atendimento...')
-    
     if (!supabase) {
-      console.error('❌ Supabase client não inicializado')
       error.value = 'Cliente não inicializado'
       return
     }
@@ -49,14 +46,10 @@ export const useRelatorios = () => {
     error.value = null
     
     try {
-      console.log('🔗 Testando conexão com Supabase...')
-      
       const { data, error: fetchError } = await supabase
         .from('Atendimentos_Pizarro')
         .select('*')
-        .limit(10)
-
-      console.log('📞 Resposta da query:', { data, fetchError })
+        .order('service_start_time', { ascending: false })
 
       if (fetchError) {
         console.error('❌ Erro ao buscar atendimentos:', fetchError)
@@ -64,12 +57,7 @@ export const useRelatorios = () => {
         return
       }
 
-      console.log('✅ Atendimentos encontrados:', data?.length || 0)
-      
-      if (data && data.length > 0) {
-        console.log('📊 Primeiro registro:', data[0])
-      }
-
+      console.log('✅ Atendimentos carregados:', data?.length || 0)
       relatorios.value = data || []
     } catch (err: any) {
       console.error('❌ Erro na busca de atendimentos:', err)
