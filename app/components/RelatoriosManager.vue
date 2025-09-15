@@ -52,31 +52,26 @@
           />
         </div>
 
-        <!-- Filtro por CNPJ/Nome da Loja -->
+        <!-- Filtro por Nome do Agente -->
         <div>
-          <label class="block text-sm font-medium text-foreground mb-2">CNPJ ou Nome da Loja</label>
+          <label class="block text-sm font-medium text-foreground mb-2">Nome do Agente ou Contato</label>
           <input
-            v-model="filtros.lojaOuCnpj"
+            v-model="filtros.agenteOuContato"
             type="text"
-            placeholder="Digite CNPJ ou nome da loja"
-            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Digite o nome do agente ou contato"
+            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
 
-        <!-- Filtro por Empresa/Operadora -->
+        <!-- Filtro por Classificação -->
         <div>
-          <label class="block text-sm font-medium text-foreground mb-2">Empresa</label>
-          <select
-            v-model="filtros.empresa"
-            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">Todas as empresas</option>
-            <option value="Vivo">Vivo</option>
-            <option value="Tim">Tim</option>
-            <option value="Claro">Claro</option>
-            <option value="Oi">Oi</option>
-            <option value="Casas Bahia">Casas Bahia</option>
-          </select>
+          <label class="block text-sm font-medium text-foreground mb-2">Classificação</label>
+          <input
+            v-model="filtros.classificacao"
+            type="text"
+            placeholder="Digite a classificação"
+            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
       </div>
 
@@ -147,70 +142,102 @@
           <table class="w-full">
             <thead>
               <tr class="border-b border-border">
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Nome</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Ticket</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Agente</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Cliente</th>
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Telefone</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Loja</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">CNPJ</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Data/Hora</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Motivo</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Empresa</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Tempo</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Início</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Solicitação</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Classificação</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Nota</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Solução</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Obs. Cliente</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Resumo</th>
               </tr>
             </thead>
             <tbody>
               <tr 
                 v-for="relatorio in (relatoriosOrdenados ? relatoriosOrdenados.slice(0, relatoriosVisiveis) : [])" 
-                :key="relatorio.id"
+                :key="relatorio.ticket_number"
                 class="border-b border-border/50 hover:bg-muted/30 transition-colors"
               >
-                <!-- Nome da pessoa -->
+                <!-- Número do ticket -->
                 <td class="py-3 px-3">
                   <div class="flex items-center">
                     <div class="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-2">
-                      <font-awesome-icon icon="user" class="w-3 h-3 text-primary" />
+                      <font-awesome-icon icon="ticket" class="w-3 h-3 text-primary" />
                     </div>
-                    <span class="font-medium text-foreground text-sm">{{ relatorio.nome_pessoa }}</span>
+                    <span class="font-medium text-foreground text-sm">{{ relatorio.ticket_number }}</span>
                   </div>
                 </td>
                 
-                <!-- Telefone -->
+                <!-- Nome do agente -->
                 <td class="py-3 px-3">
-                  <span class="text-foreground text-sm">{{ relatorio.telefone }}</span>
+                  <span class="text-foreground text-sm">{{ relatorio.agent_name }}</span>
                 </td>
                 
-                <!-- Nome da loja -->
+                <!-- Nome do contato -->
                 <td class="py-3 px-3">
-                  <span class="text-foreground font-medium text-sm">{{ relatorio.nome_loja }}</span>
+                  <span class="text-foreground font-medium text-sm">{{ relatorio.contact_name || '-' }}</span>
                 </td>
                 
-                <!-- CNPJ -->
+                <!-- Telefone do contato -->
                 <td class="py-3 px-3">
-                  <span class="text-foreground text-xs font-mono">{{ relatorio.cnpj }}</span>
+                  <span class="text-foreground text-xs">{{ relatorio.contact_phone || '-' }}</span>
                 </td>
                 
-                <!-- Data e Hora -->
+                <!-- Tempo de serviço -->
                 <td class="py-3 px-3">
-                  <div class="text-xs">
-                    <div class="font-medium text-foreground">{{ relatorio.data_abertura_chamado }}</div>
-                    <div class="text-muted-foreground">{{ relatorio.hora_abertura_chamado }}</div>
-                  </div>
+                  <span class="text-foreground text-xs">{{ relatorio.service_time || '-' }}</span>
                 </td>
                 
-                <!-- Motivo -->
+                <!-- Hora de início do serviço -->
                 <td class="py-3 px-3">
-                  <span class="text-foreground text-xs">{{ relatorio.motivo_chamado }}</span>
+                  <span class="text-foreground text-xs">{{ relatorio.service_start_time || '-' }}</span>
                 </td>
                 
-                <!-- Empresa -->
+                <!-- Solicitação do contato -->
                 <td class="py-3 px-3">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                        :class="getEmpresaClass(relatorio.nome_empresa)">
-                    {{ relatorio.nome_empresa }}
+                  <span class="text-foreground text-xs" :title="relatorio.contact_request || '-'">
+                    {{ truncateText(relatorio.contact_request, 30) }}
+                  </span>
+                </td>
+                
+                <!-- Classificação do serviço -->
+                <td class="py-3 px-3">
+                  <span class="text-foreground text-xs">{{ relatorio.service_classification || '-' }}</span>
+                </td>
+                
+                <!-- Pontuação do serviço -->
+                <td class="py-3 px-3">
+                  <span class="text-foreground text-xs">{{ relatorio.service_score || '-' }}</span>
+                </td>
+                
+                <!-- Solução do agente -->
+                <td class="py-3 px-3">
+                  <span class="text-foreground text-xs" :title="relatorio.agent_solution || '-'">
+                    {{ truncateText(relatorio.agent_solution, 30) }}
+                  </span>
+                </td>
+                
+                <!-- Nota do cliente -->
+                <td class="py-3 px-3">
+                  <span class="text-foreground text-xs" :title="relatorio.customer_note || '-'">
+                    {{ truncateText(relatorio.customer_note, 30) }}
+                  </span>
+                </td>
+                
+                <!-- Resumo do serviço -->
+                <td class="py-3 px-3">
+                  <span class="text-foreground text-xs" :title="relatorio.service_summary || '-'">
+                    {{ truncateText(relatorio.service_summary, 30) }}
                   </span>
                 </td>
               </tr>
               
               <tr v-if="relatoriosFiltrados && relatoriosVisiveis < relatoriosFiltrados.length">
-                <td :colspan="7" style="padding:0; border:none; background:transparent;">
+                <td :colspan="12" style="padding:0; border:none; background:transparent;">
                   <div ref="relatorioSentinel" style="height: 1px; width: 100%;"></div>
                 </td>
               </tr>
@@ -231,26 +258,28 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-// Interface para relatório
-interface Relatorio {
-  id: string
-  nome_pessoa: string
-  telefone: string
-  nome_loja: string
-  cnpj: string
-  nome_empresa: string
-  data_abertura_chamado: string
-  hora_abertura_chamado: string
-  motivo_chamado: string
-  created_at: string
+// Interface para atendimento da tabela Atendimentos_Pizarro
+interface AtendimentoPizarro {
+  ticket_number: string
+  agent_name: string
+  contact_name: string | null
+  contact_phone: string | null
+  service_time: string | null
+  service_start_time: string | null
+  contact_request: string | null
+  service_classification: string | null
+  service_score: string | null
+  agent_solution: string | null
+  customer_note: string | null
+  service_summary: string | null
 }
 
-// Interface para filtros
+// Interface para filtros 
 interface Filtros {
   dataInicial: string
   dataFinal: string
-  lojaOuCnpj: string
-  empresa: string
+  agenteOuContato: string
+  classificacao: string
 }
 
 // Usar o composable de relatórios
@@ -266,8 +295,8 @@ const {
 const filtros = ref<Filtros>({
   dataInicial: '',
   dataFinal: '',
-  lojaOuCnpj: '',
-  empresa: ''
+  agenteOuContato: '',
+  classificacao: ''
 })
 
 // Carregar relatórios quando o componente for montado
@@ -279,8 +308,8 @@ onMounted(() => {
 const filtrosAplicados = computed(() => {
   return filtros.value.dataInicial !== '' || 
          filtros.value.dataFinal !== '' || 
-         filtros.value.lojaOuCnpj !== '' || 
-         filtros.value.empresa !== ''
+         filtros.value.agenteOuContato !== '' || 
+         filtros.value.classificacao !== ''
 })
 
 // Computed para relatórios filtrados
@@ -289,8 +318,9 @@ const relatoriosFiltrados = computed(() => {
 
   if (filtros.value.dataInicial) {
     resultado = resultado.filter(r => {
-      // Converter data do formato DD/MM/YYYY para comparação
-      const dataRelatorio = new Date(r.data_abertura_chamado.split('/').reverse().join('-'))
+      // Usar service_start_time se disponível
+      if (!r.service_start_time) return false
+      const dataRelatorio = new Date(r.service_start_time)
       const dataFiltro = new Date(filtros.value.dataInicial)
       return dataRelatorio >= dataFiltro
     })
@@ -298,35 +328,36 @@ const relatoriosFiltrados = computed(() => {
 
   if (filtros.value.dataFinal) {
     resultado = resultado.filter(r => {
-      const dataRelatorio = new Date(r.data_abertura_chamado.split('/').reverse().join('-'))
+      if (!r.service_start_time) return false
+      const dataRelatorio = new Date(r.service_start_time)
       const dataFiltro = new Date(filtros.value.dataFinal)
       return dataRelatorio <= dataFiltro
     })
   }
 
-  if (filtros.value.lojaOuCnpj) {
-    const termo = filtros.value.lojaOuCnpj.toLowerCase()
+  if (filtros.value.agenteOuContato) {
+    const termo = filtros.value.agenteOuContato.toLowerCase()
     resultado = resultado.filter(r => 
-      r.nome_loja.toLowerCase().includes(termo) || 
-      r.cnpj.toLowerCase().includes(termo)
+      r.agent_name.toLowerCase().includes(termo) || 
+      (r.contact_name && r.contact_name.toLowerCase().includes(termo))
     )
   }
 
-  if (filtros.value.empresa) {
+  if (filtros.value.classificacao) {
     resultado = resultado.filter(r =>
-      r.nome_empresa && filtros.value.empresa &&
-      r.nome_empresa.toLowerCase() === filtros.value.empresa.toLowerCase()
+      r.service_classification && filtros.value.classificacao &&
+      r.service_classification.toLowerCase() === filtros.value.classificacao.toLowerCase()
     )
   }
 
   return resultado
 })
 
-// Computed para ordenar relatórios por data de criação (mais novos no topo)
+// Computed para ordenar relatórios por service_start_time (mais novos no topo)
 const relatoriosOrdenados = computed(() => {
   return relatoriosFiltrados.value ? [...relatoriosFiltrados.value].sort((a, b) => {
-    if (!a.created_at || !b.created_at) return 0
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    if (!a.service_start_time || !b.service_start_time) return 0
+    return new Date(b.service_start_time).getTime() - new Date(a.service_start_time).getTime()
   }) : []
 })
 
@@ -341,8 +372,8 @@ function limparFiltros() {
   filtros.value = {
     dataInicial: '',
     dataFinal: '',
-    lojaOuCnpj: '',
-    empresa: ''
+    agenteOuContato: '',
+    classificacao: ''
   }
   console.log('Filtros limpos - os filtros agora são automáticos!')
 }
@@ -356,6 +387,13 @@ function getEmpresaClass(empresa: string) {
     'OI': 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
   }
   return classes[empresa as keyof typeof classes] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+}
+
+// Função para truncar texto
+function truncateText(text: string | null, maxLength: number): string {
+  if (!text) return '-'
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
 }
 
 // Função auxiliar para converter data sem problemas de fuso horário

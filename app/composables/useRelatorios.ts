@@ -4,115 +4,56 @@ export const useRelatorios = () => {
     supabase = useSupabaseClient()
   }
   
-  // Interface para o relatório
-  interface Relatorio {
-    id: string
-    nome_pessoa: string
-    telefone: string
-    nome_loja: string
-    cnpj: string
-    nome_empresa: string
-    data_abertura_chamado: string
-    hora_abertura_chamado: string
-    motivo_chamado: string
-    created_at: string
+  // Interface para os dados da tabela Atendimentos_Pizarro
+  interface AtendimentoPizarro {
+    ticket_number: string
+    agent_name: string
+    contact_name: string | null
+    contact_phone: string | null
+    service_time: string | null
+    service_start_time: string | null
+    contact_request: string | null
+    service_classification: string | null
+    service_score: string | null
+    agent_solution: string | null
+    customer_note: string | null
+    service_summary: string | null
   }
   
   // Estados reativos
-  const relatorios = ref<Relatorio[]>([])
+  const relatorios = ref<AtendimentoPizarro[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   
-  // Função para buscar todos os relatórios (sem filtro por usuário)
+  // Função para buscar todos os registros da tabela Atendimentos_Pizarro
   const fetchRelatorios = async () => {
-    console.log('🔍 Iniciando busca de relatórios...')
+    console.log('🔍 Iniciando busca de registros de atendimento...')
     isLoading.value = true
     error.value = null
     try {
       const { data, error: fetchError } = await supabase
-        .from('relatorios')
+        .from('Atendimentos_Pizarro')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('service_start_time', { ascending: false })
 
       if (fetchError) {
-        console.error('❌ Erro ao buscar relatórios:', fetchError)
+        console.error('❌ Erro ao buscar atendimentos:', fetchError)
         throw fetchError
       }
 
-      console.log('✅ Relatórios encontrados:', data?.length || 0)
-      console.log('📊 Dados dos relatórios:', data)
+      console.log('✅ Atendimentos encontrados:', data?.length || 0)
+      console.log('📊 Dados dos atendimentos:', data)
 
       relatorios.value = data || []
     } catch (err: any) {
-      console.error('❌ Erro na busca de relatórios:', err)
-      error.value = err.message || 'Erro ao carregar relatórios'
+      console.error('❌ Erro na busca de atendimentos:', err)
+      error.value = err.message || 'Erro ao carregar atendimentos'
       relatorios.value = []
     } finally {
       isLoading.value = false
     }
   }
   
-  // Função para adicionar relatório
-  const addRelatorio = async (relatorioData: Omit<Relatorio, 'id' | 'created_at'>) => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      
-      if (!currentUser) {
-        throw new Error('Usuário não autenticado')
-      }
-      
-      const { data, error: insertError } = await supabase
-        .from('relatorios')
-        .insert([
-          {
-            ...relatorioData,
-            usuario_id: currentUser.id
-          }
-        ])
-        .select()
-      
-      if (insertError) {
-        console.error('❌ Erro ao adicionar relatório:', insertError)
-        throw insertError
-      }
-      
-      console.log('✅ Relatório adicionado:', data)
-      
-      // Recarregar a lista
-      await fetchRelatorios()
-      
-      return data
-    } catch (err: any) {
-      console.error('❌ Erro ao adicionar relatório:', err)
-      error.value = err.message || 'Erro ao adicionar relatório'
-      throw err
-    }
-  }
-  
-  // Função para deletar relatório
-  const deleteRelatorio = async (relatorioId: string) => {
-    try {
-      const { error: deleteError } = await supabase
-        .from('relatorios')
-        .delete()
-        .eq('id', relatorioId)
-      
-      if (deleteError) {
-        console.error('❌ Erro ao deletar relatório:', deleteError)
-        throw deleteError
-      }
-      
-      console.log('✅ Relatório deletado:', relatorioId)
-      
-      // Recarregar a lista
-      await fetchRelatorios()
-      
-    } catch (err: any) {
-      console.error('❌ Erro ao deletar relatório:', err)
-      error.value = err.message || 'Erro ao deletar relatório'
-      throw err
-    }
-  }
   
   // Função para limpar erros
   const clearError = () => {
@@ -124,8 +65,6 @@ export const useRelatorios = () => {
     isLoading,
     error,
     fetchRelatorios,
-    addRelatorio,
-    deleteRelatorio,
     clearError
   }
 }
