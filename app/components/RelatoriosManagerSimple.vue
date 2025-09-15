@@ -328,7 +328,7 @@
                 <div>
                   <label class="text-sm font-medium text-muted-foreground">Resumo do Atendimento</label>
                   <div class="mt-2 p-4 bg-muted/30 rounded-lg">
-                    <p class="text-foreground whitespace-pre-wrap">{{ atendimentoSelecionado.service_summary || 'Não informado' }}</p>
+                    <div class="text-foreground leading-relaxed" v-html="formatarResumo(atendimentoSelecionado.service_summary)"></div>
                   </div>
                 </div>
               </div>
@@ -587,6 +587,27 @@ function truncateText(text: string | null, maxLength: number): string {
   if (!text) return '-'
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
+}
+
+// Função para formatar resumo do atendimento
+function formatarResumo(resumo: string | null): string {
+  if (!resumo) return '<p class="text-muted-foreground italic">Não informado</p>'
+  
+  // Extrair apenas o resumo geral
+  const resumoGeralMatch = resumo.match(/Resumo Geral:\s*(.*)/s)
+  
+  if (resumoGeralMatch && resumoGeralMatch[1]) {
+    const textoResumo = resumoGeralMatch[1].trim()
+    return `<div class="p-3 bg-muted/10 rounded-lg border-l-2 border-muted-foreground/20">
+              <strong class="text-foreground text-sm">📋 Resumo Geral:</strong>
+              <p class="mt-2 text-foreground/90 leading-relaxed text-sm">${textoResumo}</p>
+            </div>`
+  }
+  
+  // Se não encontrar "Resumo Geral", exibir o texto completo com fonte mais clara
+  return `<div class="p-3 bg-muted/10 rounded-lg border-l-2 border-muted-foreground/20">
+            <p class="text-foreground/90 leading-relaxed text-sm whitespace-pre-line">${resumo}</p>
+          </div>`
 }
 
 // Funções do modal
