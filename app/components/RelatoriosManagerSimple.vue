@@ -35,7 +35,7 @@
         </div>
 
         <!-- Filtro por Nome do Agente -->
-        <div>
+        <div class="relative">
           <label class="block text-sm font-medium text-foreground mb-2">Agente</label>
           <input
             v-model="filtros.agenteOuContato"
@@ -43,10 +43,13 @@
             placeholder="Digite nome do agente"
             class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          <div v-if="processandoFiltro && filtros.agenteOuContato" class="absolute right-3 top-9 text-muted-foreground">
+            <font-awesome-icon icon="spinner" class="animate-spin w-4 h-4" />
+          </div>
         </div>
 
         <!-- Filtro por Nome do Cliente -->
-        <div>
+        <div class="relative">
           <label class="block text-sm font-medium text-foreground mb-2">Nome do Cliente</label>
           <input
             v-model="filtros.classificacao"
@@ -54,6 +57,9 @@
             placeholder="Digite nome do cliente"
             class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          <div v-if="processandoFiltro && filtros.classificacao" class="absolute right-3 top-9 text-muted-foreground">
+            <font-awesome-icon icon="spinner" class="animate-spin w-4 h-4" />
+          </div>
         </div>
       </div>
 
@@ -95,7 +101,7 @@
     <!-- Estado vazio -->
     <div v-else-if="relatoriosFiltrados.length === 0" class="text-center py-8">
       <div class="text-muted-foreground mb-4">
-        <font-awesome-icon icon="inbox" class="w-12 h-12" />
+        <font-awesome-icon icon="exclamation-circle" class="w-12 h-12" />
       </div>
       <h3 class="text-lg font-medium text-foreground mb-2">
         {{ filtrosAplicados ? 'Nenhum atendimento encontrado' : 'Nenhum atendimento disponível' }}
@@ -346,7 +352,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 // Interface para atendimento da tabela Atendimentos_Pizarro
 interface AtendimentoPizarro {
@@ -393,6 +399,49 @@ const filtros = ref<Filtros>({
 const modalAberto = ref(false)
 const atendimentoSelecionado = ref<AtendimentoPizarro | null>(null)
 
+// Estados para debounce dos filtros de texto
+const filtrosDebounce = ref<Filtros>({
+  dataInicial: '',
+  dataFinal: '',
+  agenteOuContato: '',
+  classificacao: ''
+})
+
+// Estado para indicar quando está processando filtros de texto
+const processandoFiltro = ref(false)
+
+// Timers separados para cada filtro
+let debounceTimerAgente: NodeJS.Timeout
+let debounceTimerCliente: NodeJS.Timeout
+
+// Watcher para aplicar debounce nos filtros de texto
+watch(() => filtros.value.agenteOuContato, (novoValor) => {
+  processandoFiltro.value = true
+  clearTimeout(debounceTimerAgente)
+  debounceTimerAgente = setTimeout(() => {
+    filtrosDebounce.value.agenteOuContato = novoValor
+    processandoFiltro.value = false
+  }, 1200) // 1.2 segundos para dar tempo ao usuário terminar de digitar
+}, { immediate: true })
+
+watch(() => filtros.value.classificacao, (novoValor) => {
+  processandoFiltro.value = true
+  clearTimeout(debounceTimerCliente)
+  debounceTimerCliente = setTimeout(() => {
+    filtrosDebounce.value.classificacao = novoValor
+    processandoFiltro.value = false
+  }, 1200) // 1.2 segundos para dar tempo ao usuário terminar de digitar
+}, { immediate: true })
+
+// Para as datas não precisamos de debounce, aplicar imediatamente
+watch(() => filtros.value.dataInicial, (novoValor) => {
+  filtrosDebounce.value.dataInicial = novoValor
+}, { immediate: true })
+
+watch(() => filtros.value.dataFinal, (novoValor) => {
+  filtrosDebounce.value.dataFinal = novoValor
+}, { immediate: true })
+
 // Carregar relatórios e configurar listeners quando o componente for montado
 onMounted(() => {
   fetchRelatorios()
@@ -418,9 +467,12 @@ onMounted(() => {
 const filtrosAplicados = computed(() => {
   const aplicados = filtros.value.dataInicial !== '' || 
          filtros.value.dataFinal !== '' || 
-         filtros.value.agenteOuContato !== '' || 
-         filtros.value.classificacao !== ''
-  console.log('🔍 Filtros aplicados:', aplicados, filtros.value)
+         filtrosDebounce.value.agenteOuContato !== '' || 
+         filtrosDebounce.value.classificacao !== ''
+  console.log('🔍 Filtros aplicados:', aplicados, { 
+    datas: { inicial: filtros.value.dataInicial, final: filtros.value.dataFinal },
+    textos: { agente: filtrosDebounce.value.agenteOuContato, cliente: filtrosDebounce.value.classificacao }
+  })
   return aplicados
 })
 
@@ -435,10 +487,27 @@ const relatoriosFiltrados = computed(() => {
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
       try {
-        const dataRelatorio = new Date(r.service_start_time)
-        const dataFiltro = new Date(filtros.value.dataInicial)
-        return dataRelatorio >= dataFiltro
+        // Extrair apenas a parte da data do service_start_time
+        // Formato esperado: "30/08/2025 11:07" ou "2025-08-30 11:07"
+        let dataAtendimento = r.service_start_time
+        
+        // Se o formato está DD/MM/YYYY, converter para YYYY-MM-DD para comparação
+        if (dataAtendimento.includes('/')) {
+          const partes = dataAtendimento.split(' ')[0]?.split('/')
+          if (partes && partes.length === 3) {
+            dataAtendimento = `${partes[2]}-${partes[1]!.padStart(2, '0')}-${partes[0]!.padStart(2, '0')}`
+          }
+        } else {
+          // Se já está em formato YYYY-MM-DD HH:mm, pegar só a data
+          dataAtendimento = dataAtendimento.split(' ')[0]!
+        }
+        
+        const dataFiltro = filtros.value.dataInicial
+        
+        console.log('Comparando datas inicial:', dataAtendimento, '>=', dataFiltro)
+        return dataAtendimento >= dataFiltro
       } catch (e) {
+        console.error('Erro ao processar data inicial:', e)
         return false
       }
     })
@@ -451,32 +520,48 @@ const relatoriosFiltrados = computed(() => {
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
       try {
-        const dataRelatorio = new Date(r.service_start_time)
-        const dataFiltro = new Date(filtros.value.dataFinal)
-        // Adicionar 23:59:59 à data final para incluir todo o dia
-        dataFiltro.setHours(23, 59, 59, 999)
-        return dataRelatorio <= dataFiltro
+        // Extrair apenas a parte da data do service_start_time
+        // Formato esperado: "30/08/2025 11:07" ou "2025-08-30 11:07"
+        let dataAtendimento = r.service_start_time
+        
+        // Se o formato está DD/MM/YYYY, converter para YYYY-MM-DD para comparação
+        if (dataAtendimento.includes('/')) {
+          const partes = dataAtendimento.split(' ')[0]?.split('/')
+          if (partes && partes.length === 3) {
+            dataAtendimento = `${partes[2]}-${partes[1]!.padStart(2, '0')}-${partes[0]!.padStart(2, '0')}`
+          }
+        } else {
+          // Se já está em formato YYYY-MM-DD HH:mm, pegar só a data
+          dataAtendimento = dataAtendimento.split(' ')[0]!
+        }
+        
+        const dataFiltro = filtros.value.dataFinal
+        
+        console.log('Comparando datas final:', dataAtendimento, '<=', dataFiltro)
+        return dataAtendimento <= dataFiltro
       } catch (e) {
+        console.error('Erro ao processar data final:', e)
         return false
       }
     })
     console.log('📅 Após filtro data final:', tamanhoAntes, '->', resultado.length)
   }
 
-  if (filtros.value.agenteOuContato) {
-    console.log('👤 Filtro agente:', filtros.value.agenteOuContato)
+  // Usar debounce para filtros de texto
+  if (filtrosDebounce.value.agenteOuContato) {
+    console.log('👤 Filtro agente:', filtrosDebounce.value.agenteOuContato)
     const tamanhoAntes = resultado.length
-    const termo = filtros.value.agenteOuContato.toLowerCase()
+    const termo = filtrosDebounce.value.agenteOuContato.toLowerCase()
     resultado = resultado.filter(r => 
-      r.agent_name.toLowerCase().includes(termo)
+      r.agent_name && r.agent_name.toLowerCase().includes(termo)
     )
     console.log('👤 Após filtro agente:', tamanhoAntes, '->', resultado.length)
   }
 
-  if (filtros.value.classificacao) {
-    console.log('👥 Filtro nome do cliente:', filtros.value.classificacao)
+  if (filtrosDebounce.value.classificacao) {
+    console.log('👥 Filtro nome do cliente:', filtrosDebounce.value.classificacao)
     const tamanhoAntes = resultado.length
-    const termo = filtros.value.classificacao.toLowerCase()
+    const termo = filtrosDebounce.value.classificacao.toLowerCase()
     resultado = resultado.filter(r =>
       r.contact_name && 
       r.contact_name.toLowerCase().includes(termo)
@@ -514,6 +599,19 @@ function limparFiltros() {
     agenteOuContato: '',
     classificacao: ''
   }
+  
+  // Limpar também os valores com debounce imediatamente
+  filtrosDebounce.value = {
+    dataInicial: '',
+    dataFinal: '',
+    agenteOuContato: '',
+    classificacao: ''
+  }
+  
+  // Limpar qualquer timer pendente e estado de processamento
+  clearTimeout(debounceTimerAgente)
+  clearTimeout(debounceTimerCliente)
+  processandoFiltro.value = false
 }
 
 // Função para truncar texto

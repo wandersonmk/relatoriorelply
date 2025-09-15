@@ -1,7 +1,17 @@
 export const useRelatorios = () => {
+  console.log('🚀 [useRelatorios] Inicializando composable...')
+  
   let supabase: any = null
   if (typeof window !== 'undefined') {
-    supabase = useSupabaseClient()
+    console.log('🌐 [useRelatorios] Ambiente cliente detectado, inicializando Supabase...')
+    try {
+      supabase = useSupabaseClient()
+      console.log('✅ [useRelatorios] Supabase client inicializado com sucesso')
+    } catch (error) {
+      console.error('❌ [useRelatorios] Erro ao inicializar Supabase client:', error)
+    }
+  } else {
+    console.log('🖥️ [useRelatorios] Ambiente servidor - Supabase não inicializado')
   }
   
   // Interface para os dados da tabela Atendimentos_Pizarro
@@ -28,21 +38,37 @@ export const useRelatorios = () => {
   // Função para buscar todos os registros da tabela Atendimentos_Pizarro
   const fetchRelatorios = async () => {
     console.log('🔍 Iniciando busca de registros de atendimento...')
+    
+    if (!supabase) {
+      console.error('❌ Supabase client não inicializado')
+      error.value = 'Cliente não inicializado'
+      return
+    }
+    
     isLoading.value = true
     error.value = null
+    
     try {
+      console.log('🔗 Testando conexão com Supabase...')
+      
       const { data, error: fetchError } = await supabase
         .from('Atendimentos_Pizarro')
         .select('*')
-        .order('service_start_time', { ascending: false })
+        .limit(10)
+
+      console.log('📞 Resposta da query:', { data, fetchError })
 
       if (fetchError) {
         console.error('❌ Erro ao buscar atendimentos:', fetchError)
-        throw fetchError
+        error.value = `Erro na consulta: ${fetchError.message}`
+        return
       }
 
       console.log('✅ Atendimentos encontrados:', data?.length || 0)
-      console.log('📊 Dados dos atendimentos:', data)
+      
+      if (data && data.length > 0) {
+        console.log('📊 Primeiro registro:', data[0])
+      }
 
       relatorios.value = data || []
     } catch (err: any) {
