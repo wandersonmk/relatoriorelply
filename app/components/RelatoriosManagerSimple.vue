@@ -36,22 +36,22 @@
 
         <!-- Filtro por Nome do Agente -->
         <div>
-          <label class="block text-sm font-medium text-foreground mb-2">Agente ou Contato</label>
+          <label class="block text-sm font-medium text-foreground mb-2">Agente</label>
           <input
             v-model="filtros.agenteOuContato"
             type="text"
-            placeholder="Digite nome"
+            placeholder="Digite nome do agente"
             class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
 
-        <!-- Filtro por Classificação -->
+        <!-- Filtro por Nome do Cliente -->
         <div>
-          <label class="block text-sm font-medium text-foreground mb-2">Classificação</label>
+          <label class="block text-sm font-medium text-foreground mb-2">Nome do Cliente</label>
           <input
             v-model="filtros.classificacao"
             type="text"
-            placeholder="Digite classificação"
+            placeholder="Digite nome do cliente"
             class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -234,8 +234,8 @@ interface AtendimentoPizarro {
 interface Filtros {
   dataInicial: string
   dataFinal: string
-  agenteOuContato: string
-  classificacao: string
+  agenteOuContato: string  // Campo usado para filtro por agente
+  classificacao: string    // Campo usado para filtro por nome do cliente
 }
 
 // Usar o composable de relatórios
@@ -262,49 +262,75 @@ onMounted(() => {
 
 // Computed para detectar se há filtros ativos
 const filtrosAplicados = computed(() => {
-  return filtros.value.dataInicial !== '' || 
+  const aplicados = filtros.value.dataInicial !== '' || 
          filtros.value.dataFinal !== '' || 
          filtros.value.agenteOuContato !== '' || 
          filtros.value.classificacao !== ''
+  console.log('🔍 Filtros aplicados:', aplicados, filtros.value)
+  return aplicados
 })
 
 // Computed para relatórios filtrados
 const relatoriosFiltrados = computed(() => {
+  console.log('📊 Dados originais:', relatoriosData.value.length, 'registros')
   let resultado = relatoriosData.value
 
   if (filtros.value.dataInicial) {
+    console.log('🗓️ Filtro data inicial:', filtros.value.dataInicial)
+    const tamanhoAntes = resultado.length
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
-      const dataRelatorio = new Date(r.service_start_time)
-      const dataFiltro = new Date(filtros.value.dataInicial)
-      return dataRelatorio >= dataFiltro
+      try {
+        const dataRelatorio = new Date(r.service_start_time)
+        const dataFiltro = new Date(filtros.value.dataInicial)
+        return dataRelatorio >= dataFiltro
+      } catch (e) {
+        return false
+      }
     })
+    console.log('📅 Após filtro data inicial:', tamanhoAntes, '->', resultado.length)
   }
 
   if (filtros.value.dataFinal) {
+    console.log('🗓️ Filtro data final:', filtros.value.dataFinal)
+    const tamanhoAntes = resultado.length
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
-      const dataRelatorio = new Date(r.service_start_time)
-      const dataFiltro = new Date(filtros.value.dataFinal)
-      return dataRelatorio <= dataFiltro
+      try {
+        const dataRelatorio = new Date(r.service_start_time)
+        const dataFiltro = new Date(filtros.value.dataFinal)
+        // Adicionar 23:59:59 à data final para incluir todo o dia
+        dataFiltro.setHours(23, 59, 59, 999)
+        return dataRelatorio <= dataFiltro
+      } catch (e) {
+        return false
+      }
     })
+    console.log('📅 Após filtro data final:', tamanhoAntes, '->', resultado.length)
   }
 
   if (filtros.value.agenteOuContato) {
+    console.log('👤 Filtro agente:', filtros.value.agenteOuContato)
+    const tamanhoAntes = resultado.length
     const termo = filtros.value.agenteOuContato.toLowerCase()
     resultado = resultado.filter(r => 
-      r.agent_name.toLowerCase().includes(termo) || 
-      (r.contact_name && r.contact_name.toLowerCase().includes(termo))
+      r.agent_name.toLowerCase().includes(termo)
     )
+    console.log('👤 Após filtro agente:', tamanhoAntes, '->', resultado.length)
   }
 
   if (filtros.value.classificacao) {
+    console.log('👥 Filtro nome do cliente:', filtros.value.classificacao)
+    const tamanhoAntes = resultado.length
+    const termo = filtros.value.classificacao.toLowerCase()
     resultado = resultado.filter(r =>
-      r.service_classification && filtros.value.classificacao &&
-      r.service_classification.toLowerCase() === filtros.value.classificacao.toLowerCase()
+      r.contact_name && 
+      r.contact_name.toLowerCase().includes(termo)
     )
+    console.log('👥 Após filtro nome do cliente:', tamanhoAntes, '->', resultado.length)
   }
 
+  console.log('✅ Resultado final filtrado:', resultado.length, 'registros')
   return resultado
 })
 
@@ -312,7 +338,11 @@ const relatoriosFiltrados = computed(() => {
 const relatoriosOrdenados = computed(() => {
   return relatoriosFiltrados.value ? [...relatoriosFiltrados.value].sort((a, b) => {
     if (!a.service_start_time || !b.service_start_time) return 0
-    return new Date(b.service_start_time).getTime() - new Date(a.service_start_time).getTime()
+    try {
+      return new Date(b.service_start_time).getTime() - new Date(a.service_start_time).getTime()
+    } catch (e) {
+      return 0
+    }
   }) : []
 })
 
