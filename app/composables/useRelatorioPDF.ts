@@ -75,62 +75,70 @@ export const useRelatorioPDF = () => {
         yPosition += 8
       }
       
-      // Preparar dados da tabela com 7 colunas (similar à imagem)
+      // Preparar dados da tabela com os novos campos solicitados
       const colunas = [
-        { header: '#', dataKey: 'numero' },
         { header: 'Ticket', dataKey: 'ticket_number' },
         { header: 'Agente', dataKey: 'agent_name' },
         { header: 'Cliente', dataKey: 'contact_name' },
         { header: 'Telefone', dataKey: 'contact_phone' },
-        { header: 'Data/Hora', dataKey: 'service_start_time' },
-        { header: 'Classificação', dataKey: 'service_classification' }
+        { header: 'Tempo', dataKey: 'service_time' },
+        { header: 'Início', dataKey: 'service_start_time' },
+        { header: 'Obs. Cliente', dataKey: 'contact_request' },
+        { header: 'Nota', dataKey: 'customer_note' }
       ]
       
       const linhas = dados.map((item, index) => ({
-        numero: (index + 1).toString(),
         ticket_number: item.ticket_number || '-',
-        agent_name: truncarTexto(item.agent_name, 18),
-        contact_name: truncarTexto(item.contact_name, 18),
+        agent_name: truncarTexto(item.agent_name, 15),
+        contact_name: truncarTexto(item.contact_name, 15),
         contact_phone: formatarTelefone(item.contact_phone),
+        service_time: item.service_time || '-',
         service_start_time: formatarDataHora(item.service_start_time),
-        service_classification: formatarClassificacao(item.service_classification)
+        contact_request: truncarTexto(item.contact_request, 20),
+        customer_note: truncarTexto(item.customer_note, 15)
       }))
       
       // === TABELA DE DADOS ===
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const availableWidth = pageWidth - 10 // 5mm margem de cada lado
+      
       autoTable(doc, {
         startY: yPosition,
         head: [colunas.map(col => col.header)],
         body: linhas.map(linha => colunas.map(col => linha[col.dataKey as keyof typeof linha])),
         theme: 'striped',
+        tableWidth: availableWidth,
         styles: {
-          fontSize: 8,
-          cellPadding: 4,
+          fontSize: 7,
+          cellPadding: 2,
           textColor: [33, 37, 41],
           lineColor: [222, 226, 230],
           lineWidth: 0.2,
-          font: 'helvetica'
+          font: 'helvetica',
+          overflow: 'linebreak'
         },
         headStyles: {
           fillColor: [52, 144, 220],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 9,
+          fontSize: 8,
           halign: 'center',
-          cellPadding: 5
+          cellPadding: 3
         },
         alternateRowStyles: {
           fillColor: [248, 249, 250]
         },
         columnStyles: {
-          0: { cellWidth: 15, halign: 'center' }, // #
-          1: { cellWidth: 35, halign: 'center' }, // Ticket
-          2: { cellWidth: 45, halign: 'left' },   // Agente
-          3: { cellWidth: 45, halign: 'left' },   // Cliente
-          4: { cellWidth: 35, halign: 'center' }, // Telefone
-          5: { cellWidth: 40, halign: 'center' }, // Data/Hora
-          6: { cellWidth: 35, halign: 'center' }  // Classificação
+          0: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Ticket - 12%
+          1: { cellWidth: availableWidth * 0.15, halign: 'left' },   // Agente - 15%
+          2: { cellWidth: availableWidth * 0.15, halign: 'left' },   // Cliente - 15%
+          3: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Telefone - 12%
+          4: { cellWidth: availableWidth * 0.10, halign: 'center' }, // Tempo - 10%
+          5: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Início - 12%
+          6: { cellWidth: availableWidth * 0.14, halign: 'left' },   // Obs. Cliente - 14%
+          7: { cellWidth: availableWidth * 0.10, halign: 'left' }    // Nota - 10%
         },
-        margin: { top: 10, left: 10, right: 10, bottom: 25 },
+        margin: { top: 10, left: 5, right: 5, bottom: 25 },
         pageBreak: 'auto',
         showHead: 'everyPage',
         didDrawPage: (data: any) => {

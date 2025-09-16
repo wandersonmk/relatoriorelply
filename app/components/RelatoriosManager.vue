@@ -530,26 +530,26 @@ async function exportToPDF() {
     
     // Preparar dados para a tabela
     const tableData = relatoriosFiltrados.value.map((relatorio, index) => [
-      (index + 1).toString(),
-      relatorio.nome_pessoa || relatorio.contact_name || '',
-      relatorio.telefone || relatorio.contact_phone || '',
-      relatorio.nome_loja || '',
-      relatorio.cnpj || '',
-      `${relatorio.data_abertura_chamado || ''} ${relatorio.hora_abertura_chamado || ''}`.trim(),
-      relatorio.motivo_chamado || relatorio.contact_request || '',
-      relatorio.nome_empresa || ''
+      relatorio.ticket_number || '',
+      relatorio.agent_name || '',
+      relatorio.contact_name || relatorio.nome_pessoa || '',
+      relatorio.contact_phone || relatorio.telefone || '',
+      relatorio.service_time || '',
+      relatorio.service_start_time || '',
+      relatorio.contact_request || relatorio.motivo_chamado || '',
+      relatorio.customer_note || ''
     ])
     
     // Configurar tabela
     autoTable(doc, {
-      head: [['#', 'Nome', 'Telefone', 'Loja', 'CNPJ', 'Data/Hora', 'Motivo', 'Empresa']],
+      head: [['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Obs. Cliente', 'Nota']],
       body: tableData,
       startY: startYTabela,
       theme: 'grid',
       styles: {
         font: 'helvetica',
-        fontSize: 8,
-        cellPadding: 3,
+        fontSize: 7,
+        cellPadding: 2,
         textColor: textColor,
         lineColor: [209, 213, 219],
         lineWidth: 0.5
@@ -558,20 +558,20 @@ async function exportToPDF() {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 9
+        fontSize: 8
       },
       alternateRowStyles: {
         fillColor: lightGray
       },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' }, // #
-        1: { cellWidth: 35 }, // Nome
-        2: { cellWidth: 30 }, // Telefone
-        3: { cellWidth: 35 }, // Loja
-        4: { cellWidth: 35 }, // CNPJ
-        5: { cellWidth: 35 }, // Data/Hora
-        6: { cellWidth: 60 }, // Motivo
-        7: { cellWidth: 20 } // Empresa
+        0: { cellWidth: 20, halign: 'center' }, // Ticket
+        1: { cellWidth: 25 }, // Agente
+        2: { cellWidth: 25 }, // Cliente
+        3: { cellWidth: 22 }, // Telefone
+        4: { cellWidth: 18, halign: 'center' }, // Tempo
+        5: { cellWidth: 22, halign: 'center' }, // Início
+        6: { cellWidth: 30 }, // Obs. Cliente
+        7: { cellWidth: 25 } // Nota
       },
       margin: { left: 15, right: 15 }
     })
@@ -663,20 +663,19 @@ async function exportToExcel() {
     
     // Linha vazia e cabeçalho da tabela
     dadosCompletos.push([])
-    dadosCompletos.push(['#', 'Nome', 'Telefone', 'Loja', 'CNPJ', 'Data Abertura', 'Hora Abertura', 'Motivo', 'Empresa'])
+    dadosCompletos.push(['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Obs. Cliente', 'Nota'])
     
     // Adicionar dados dos relatórios
     relatoriosFiltrados.value.forEach((relatorio, index) => {
       dadosCompletos.push([
-        (index + 1).toString(),
-        relatorio.nome_pessoa || relatorio.contact_name || '',
-        relatorio.telefone || relatorio.contact_phone || '',
-        relatorio.nome_loja || '',
-        relatorio.cnpj || '',
-        relatorio.data_abertura_chamado || '',
-        relatorio.hora_abertura_chamado || '',
-        relatorio.motivo_chamado || relatorio.contact_request || '',
-        relatorio.nome_empresa || ''
+        relatorio.ticket_number || '',
+        relatorio.agent_name || '',
+        relatorio.contact_name || relatorio.nome_pessoa || '',
+        relatorio.contact_phone || relatorio.telefone || '',
+        relatorio.service_time || '',
+        relatorio.service_start_time || '',
+        relatorio.contact_request || relatorio.motivo_chamado || '',
+        relatorio.customer_note || ''
       ])
     })
     
