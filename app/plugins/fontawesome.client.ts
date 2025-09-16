@@ -29,7 +29,9 @@ import {
   faComments,
   faFilter,
   faDatabase,
-  faTicket
+  faTicket,
+  faSpinner,
+  faEraser
 } from '@fortawesome/free-solid-svg-icons'
 
 // This is important, we are going to let Nuxt worry about the CSS
@@ -66,7 +68,9 @@ library.add(
   faComments,
   faFilter,
   faDatabase,
-  faTicket
+  faTicket,
+  faSpinner,
+  faEraser
 )
 
 export default defineNuxtPlugin((nuxtApp) => {

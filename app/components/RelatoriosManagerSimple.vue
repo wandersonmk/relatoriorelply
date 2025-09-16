@@ -9,6 +9,18 @@
           Total de registros: <span class="font-semibold text-primary">{{ relatoriosFiltrados.length }}</span>
         </p>
       </div>
+      
+      <!-- Botão PDF no header -->
+      <div>
+        <button
+          @click="gerarRelatorioPDF"
+          :disabled="!relatoriosFiltrados || relatoriosFiltrados.length === 0 || gerandoPDF"
+          class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground rounded-lg transition-colors text-sm font-medium shadow-sm"
+        >
+          <font-awesome-icon :icon="gerandoPDF ? 'spinner' : 'file-pdf'" :class="{ 'animate-spin': gerandoPDF, 'w-4 h-4': true }" />
+          <span>{{ gerandoPDF ? 'Gerando PDF...' : 'Exportar PDF' }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Filtros -->
@@ -388,6 +400,12 @@ const {
   clearError 
 } = useRelatorios()
 
+// Usar o composable de PDF
+const { gerarPDF } = useRelatorioPDF()
+
+// Estado para controle da geração do PDF
+const gerandoPDF = ref(false)
+
 // Estados reativos
 const filtros = ref<Filtros>({
   dataInicial: '',
@@ -623,6 +641,43 @@ function fecharModal() {
   atendimentoSelecionado.value = null
   // Restaurar scroll do body
   document.body.style.overflow = 'auto'
+}
+
+// Função para gerar PDF
+async function gerarRelatorioPDF() {
+  if (!relatoriosFiltrados.value || relatoriosFiltrados.value.length === 0) {
+    const toast = await useToastSafe()
+    toast.warning('Nenhum dado para gerar PDF')
+    return
+  }
+
+  try {
+    gerandoPDF.value = true
+    
+    // Preparar dados dos filtros para o PDF
+    const dadosFiltros = {
+      agente: filtrosDebounce.value.agenteOuContato,
+      cliente: filtrosDebounce.value.classificacao,
+      dataInicio: filtrosDebounce.value.dataInicial,
+      dataFim: filtrosDebounce.value.dataFinal
+    }
+    
+    // Gerar PDF com os dados filtrados
+    const resultado = await gerarPDF(relatoriosFiltrados.value, dadosFiltros)
+    
+    const toast = await useToastSafe()
+    if (resultado.sucesso) {
+      toast.success(`PDF gerado com sucesso: ${resultado.nomeArquivo}`)
+    } else {
+      toast.error('Erro ao gerar PDF')
+    }
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error)
+    const toast = await useToastSafe()
+    toast.error('Erro ao gerar PDF')
+  } finally {
+    gerandoPDF.value = false
+  }
 }
 
 // Função para formatar data
