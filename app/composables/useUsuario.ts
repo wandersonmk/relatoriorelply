@@ -46,23 +46,42 @@ export const useUsuario = () => {
     const { user } = useAuth()
     const supabase = useSupabaseClient()
     
-    if (!userId && !user.value?.id) {
+    // Priorizar busca por email que é mais confiável
+    let userEmail = null
+    let targetUserId = null
+    
+    if (userId) {
+      targetUserId = userId
+    } else if (user.value?.email) {
+      userEmail = user.value.email
+    } else if (user.value?.id) {
+      targetUserId = user.value.id
+    } else {
+      // Tentar pegar email do localStorage
+      userEmail = localStorage.getItem('user_email')
+    }
+    
+    if (!userEmail && !targetUserId) {
       console.log('[useUsuario] Nenhum usuário logado encontrado')
       return null
     }
     
-    const targetUserId = userId || user.value!.id
-    console.log('[useUsuario] Buscando dados do usuário:', targetUserId)
+    console.log('[useUsuario] Buscando dados do usuário:', userEmail || targetUserId)
     
     isLoading.value = true
     error.value = null
     
     try {
-      const { data, error: fetchError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('id', targetUserId)
-        .single()
+      let query = supabase.from('usuarios').select('*')
+      
+      // Buscar por email se disponível, senão por ID
+      if (userEmail) {
+        query = query.eq('email', userEmail)
+      } else {
+        query = query.eq('id', targetUserId)
+      }
+      
+      const { data, error: fetchError } = await query.single()
       
       if (fetchError) {
         throw fetchError

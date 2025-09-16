@@ -348,6 +348,10 @@ const toast = ref<any>(null)
 if (process.client) {
   onMounted(async () => {
     toast.value = await useToastSafe()
+    
+    // Buscar dados do usuário imediatamente
+    await fetchUsuarioData()
+    
     checkUserSession()
     
     // Watch para debug (dentro do onMounted para evitar erros de hidratação)
@@ -366,6 +370,7 @@ if (process.client) {
   // Escutar mudanças de visibilidade da página para atualizar dados
   const handleVisibilityChange = async () => {
     if (!document.hidden) {
+      await fetchUsuarioData() // Buscar dados atualizados
       checkUserSession()
     }
   }
@@ -383,12 +388,14 @@ if (process.client) {
 const checkUserSession = async () => {
   if (process.client) {
     try {
+      console.log('[AppSidebar] Verificando sessão do usuário...')
+      
       // Método mais simples - verificar email salvo
       const savedEmail = localStorage.getItem('user_email')
       if (savedEmail) {
         userEmail.value = savedEmail
         isLoggedIn.value = true
-        console.log('[AppSidebar] Email encontrado:', savedEmail)
+        console.log('[AppSidebar] Email encontrado no localStorage:', savedEmail)
         await fetchUsuarioData() // Buscar dados da empresa
         return
       }
@@ -400,6 +407,7 @@ const checkUserSession = async () => {
         if (parsed.user && parsed.user.email) {
           userEmail.value = parsed.user.email
           isLoggedIn.value = true
+          localStorage.setItem('user_email', parsed.user.email) // Salvar para próxima vez
           console.log('[AppSidebar] Usuário encontrado no Supabase:', userEmail.value)
           await fetchUsuarioData() // Buscar dados da empresa
           return
@@ -411,6 +419,7 @@ const checkUserSession = async () => {
       if (globalUser.value && globalUser.value.email) {
         userEmail.value = globalUser.value.email
         isLoggedIn.value = true
+        localStorage.setItem('user_email', globalUser.value.email) // Salvar para próxima vez
         console.log('[AppSidebar] Usuário do estado global:', userEmail.value)
         await fetchUsuarioData() // Buscar dados da empresa
         return
