@@ -361,7 +361,26 @@ const relatoriosFiltrados = computed(() => {
 const relatoriosOrdenados = computed(() => {
   return relatoriosFiltrados.value ? [...relatoriosFiltrados.value].sort((a, b) => {
     if (!a.service_start_time || !b.service_start_time) return 0
-    return new Date(b.service_start_time).getTime() - new Date(a.service_start_time).getTime()
+    
+    // Função para converter string de data para Date object
+    const parseDate = (dateStr: string) => {
+      // Se está no formato dd/MM/yyyy HH:mm ou dd/MM/yyyy, HH:mm:ss
+      if (dateStr.includes('/')) {
+        const [datePart, timePart] = dateStr.split(/[,\s]+/)
+        if (datePart) {
+          const [day, month, year] = datePart.split('/')
+          const timeStr = timePart || '00:00:00'
+          return new Date(`${year}-${month}-${day}T${timeStr}`)
+        }
+      }
+      // Fallback para outros formatos
+      return new Date(dateStr)
+    }
+    
+    const dateA = parseDate(a.service_start_time)
+    const dateB = parseDate(b.service_start_time)
+    
+    return dateB.getTime() - dateA.getTime()
   }) : []
 })
 
