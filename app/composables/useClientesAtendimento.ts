@@ -14,6 +14,42 @@ interface AtendimentoRaw {
   service_start_time: string | null
 }
 
+// Função para converter data em string para Date object, suportando múltiplos formatos
+const parseDate = (dataString: string | null): Date | null => {
+  if (!dataString) return null
+  
+  try {
+    // Se está no formato brasileiro DD/MM/YYYY HH:mm
+    if (dataString.includes('/')) {
+      const parts = dataString.split(' ')
+      const datePart = parts[0]
+      const timePart = parts[1] || '00:00'
+      
+      if (datePart) {
+        const dateComponents = datePart.split('/')
+        if (dateComponents.length === 3) {
+          const [day, month, year] = dateComponents
+          if (day && month && year) {
+            // Converter para formato ISO para criar Date
+            const isoFormat = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`
+            return new Date(isoFormat)
+          }
+        }
+      }
+    }
+    // Se está no formato ISO (YYYY-MM-DD)
+    else if (dataString.includes('-') && dataString.match(/^\d{4}-\d{2}-\d{2}/)) {
+      return new Date(dataString)
+    }
+    
+    // Fallback: tentar parsing direto
+    return new Date(dataString)
+  } catch (e) {
+    console.error('Erro ao fazer parse da data:', dataString, e)
+    return null
+  }
+}
+
 export const useClientesAtendimento = () => {
   let supabase: any = null
   if (typeof window !== 'undefined') {
@@ -59,11 +95,30 @@ export const useClientesAtendimento = () => {
           const cliente = clientesMap.get(key)!
           cliente.total_atendimentos++
           
-          // Atualizar primeiro atendimento (mais antigo)
-          if (atendimento.service_start_time && 
-              (!cliente.primeiro_atendimento || 
-               new Date(atendimento.service_start_time) < new Date(cliente.primeiro_atendimento))) {
-            cliente.primeiro_atendimento = atendimento.service_start_time
+          if (atendimento.service_start_time) {
+            const dataAtendimento = parseDate(atendimento.service_start_time)
+            
+            if (dataAtendimento) {
+              // Atualizar primeiro atendimento (mais antigo)
+              if (!cliente.primeiro_atendimento) {
+                cliente.primeiro_atendimento = atendimento.service_start_time
+              } else {
+                const dataPrimeiro = parseDate(cliente.primeiro_atendimento)
+                if (dataPrimeiro && dataAtendimento < dataPrimeiro) {
+                  cliente.primeiro_atendimento = atendimento.service_start_time
+                }
+              }
+              
+              // Atualizar último atendimento (mais recente)
+              if (!cliente.ultimo_atendimento) {
+                cliente.ultimo_atendimento = atendimento.service_start_time
+              } else {
+                const dataUltimo = parseDate(cliente.ultimo_atendimento)
+                if (dataUltimo && dataAtendimento > dataUltimo) {
+                  cliente.ultimo_atendimento = atendimento.service_start_time
+                }
+              }
+            }
           }
         } else {
           clientesMap.set(key, {

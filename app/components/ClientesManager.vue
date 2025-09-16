@@ -11,23 +11,25 @@
       </div>
       
       <!-- Botões de exportação -->
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-3">
+        <!-- Botão PDF -->
         <button
           @click="exportToPDF"
-          class="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
-          title="Exportar para PDF"
+          :disabled="!props.clientes || props.clientes.length === 0 || gerandoPDF"
+          class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground rounded-lg transition-colors text-sm font-medium shadow-sm"
         >
-          <font-awesome-icon icon="file-pdf" class="w-4 h-4" />
-          <span>PDF</span>
+          <font-awesome-icon :icon="gerandoPDF ? 'spinner' : 'file-pdf'" :class="{ 'animate-spin': gerandoPDF, 'w-4 h-4': true }" />
+          <span>{{ gerandoPDF ? 'Gerando PDF...' : 'Exportar PDF' }}</span>
         </button>
         
+        <!-- Botão Excel -->
         <button
           @click="exportToExcel"
-          class="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
-          title="Exportar para Excel"
+          :disabled="!props.clientes || props.clientes.length === 0 || gerandoExcel"
+          class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:bg-muted disabled:text-muted-foreground rounded-lg transition-colors text-sm font-medium shadow-sm"
         >
-          <font-awesome-icon icon="file-excel" class="w-4 h-4" />
-          <span>Excel</span>
+          <font-awesome-icon :icon="gerandoExcel ? 'spinner' : 'file-excel'" :class="{ 'animate-spin': gerandoExcel, 'w-4 h-4': true }" />
+          <span>{{ gerandoExcel ? 'Gerando Excel...' : 'Exportar Excel' }}</span>
         </button>
       </div>
     </div>
@@ -178,33 +180,31 @@
       class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
     >
       <div class="bg-card rounded-lg shadow-xl max-w-md w-full p-6 border border-border">
-        <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 dark:bg-red-900/20 rounded-full">
-          <font-awesome-icon icon="exclamation-triangle" class="w-6 h-6 text-red-600" />
+        <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/20 rounded-full">
+          <font-awesome-icon icon="trash" class="w-8 h-8 text-red-600" />
         </div>
         
-        <h3 class="text-lg font-semibold text-foreground text-center mb-2">
-          Confirmar exclusão
+        <h3 class="text-xl font-semibold text-foreground text-center mb-2">
+          Confirmar Exclusão
         </h3>
         
         <p class="text-muted-foreground text-center mb-6">
-          Tem certeza que deseja excluir o cliente 
+          Deseja excluir o cliente 
           <strong class="text-foreground">{{ clienteParaExcluir.contact_name }}</strong>?
           <br><br>
-          <span class="text-red-600 font-medium">⚠️ Esta ação irá remover TODOS os {{ clienteParaExcluir.total_atendimentos }} atendimento{{ clienteParaExcluir.total_atendimentos === 1 ? '' : 's' }} deste cliente!</span>
-          <br>
-          Esta ação não pode ser desfeita.
+          <span class="text-red-600 font-medium">⚠️ Serão removidos TODOS os {{ clienteParaExcluir.total_atendimentos }} atendimento{{ clienteParaExcluir.total_atendimentos === 1 ? '' : 's' }}!</span>
         </p>
         
         <div class="flex space-x-3">
           <button
             @click="cancelarExclusao"
-            class="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
+            class="flex-1 px-4 py-3 border border-border rounded-lg text-foreground hover:bg-muted transition-colors font-medium"
           >
             Cancelar
           </button>
           <button
-            @click="excluirCliente"
-            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            @click="excluirClienteSimples"
+            class="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
           >
             Excluir
           </button>
@@ -361,8 +361,65 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast customizado -->
+    <div 
+      v-if="showToast"
+      class="fixed top-6 right-6 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[9999] flex items-center space-x-3 animate-fade-in backdrop-blur-sm border border-green-400/20"
+      style="z-index: 10000;"
+    >
+      <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+      <div class="flex flex-col">
+        <span class="font-semibold text-sm">Sucesso</span>
+        <span class="text-sm opacity-90">{{ toastMessage }}</span>
+      </div>
+      <button 
+        @click="showToast = false"
+        class="ml-2 text-white/60 hover:text-white transition-colors"
+      >
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>
 
 <script setup lang="ts">
 import type { ClienteAtendimento } from '../composables/useClientesAtendimento'
@@ -379,12 +436,38 @@ const emit = defineEmits<{
   clienteExcluido: []
 }>()
 
+// Composable para puxar o nome da empresa (usando o mesmo do sidebar)
+const { nomeEmpresa, fetchUsuarioData } = useUsuario()
+
+// Buscar nome da empresa ao montar o componente
+onMounted(async () => {
+  await fetchUsuarioData()
+  console.log('[ClientesManager] Nome da empresa:', nomeEmpresa.value)
+})
+
 // Estado para mock loading/error (já que os dados vem da página)
 const isLoading = ref(false)
 const error = ref('')
 
 // Estado para modal de confirmação de exclusão
 const clienteParaExcluir = ref<ClienteAtendimento | null>(null)
+
+// Estado para toast customizado
+const showToast = ref(false)
+const toastMessage = ref('')
+
+// Estados de loading para exportação
+const gerandoPDF = ref(false)
+const gerandoExcel = ref(false)
+
+// Função para mostrar toast customizado
+const mostrarToast = (mensagem: string) => {
+  toastMessage.value = mensagem
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
 
 // Estado para modal de histórico
 const clienteHistorico = ref<ClienteAtendimento | null>(null)
@@ -440,7 +523,7 @@ const recarregarClientes = () => {
   window.location.reload()
 }
 
-// Função para confirmar exclusão
+// Função para mostrar modal de confirmação
 const confirmarExclusao = (cliente: ClienteAtendimento) => {
   clienteParaExcluir.value = cliente
 }
@@ -450,35 +533,35 @@ const cancelarExclusao = () => {
   clienteParaExcluir.value = null
 }
 
-// Função para excluir cliente (remove todos os atendimentos do cliente)
-const excluirCliente = async () => {
-  if (clienteParaExcluir.value) {
-    try {
-      // Usar supabase para excluir todos os atendimentos do cliente
-      const supabase = useSupabaseClient()
-      
-      const { error } = await supabase
-        .from('Atendimentos_Pizarro')
-        .delete()
-        .eq('contact_name', clienteParaExcluir.value.contact_name)
-        .eq('contact_phone', clienteParaExcluir.value.contact_phone)
-      
-      if (error) {
-        console.error('Erro ao excluir cliente:', error)
-        alert('Erro ao excluir cliente. Tente novamente.')
-      } else {
-        console.log('✅ Cliente excluído com sucesso')
-        alert('Cliente excluído com sucesso!')
-        
-        // Emitir evento para a página recarregar os dados
-        emit('clienteExcluido')
-      }
-    } catch (e) {
-      console.error('Erro ao excluir cliente:', e)
-      alert('Erro ao excluir cliente. Tente novamente.')
-    } finally {
-      clienteParaExcluir.value = null
+// Função para excluir cliente do banco de dados
+const excluirClienteSimples = async () => {
+  if (!clienteParaExcluir.value) return
+  
+  try {
+    const supabase = useSupabaseClient()
+    
+    const { error } = await supabase
+      .from('Atendimentos_Pizarro')
+      .delete()
+      .eq('contact_name', clienteParaExcluir.value.contact_name)
+      .eq('contact_phone', clienteParaExcluir.value.contact_phone)
+    
+    // Fechar modal
+    clienteParaExcluir.value = null
+    
+    if (!error) {
+      // Mostrar toast de sucesso
+      mostrarToast('Cliente excluído com sucesso!')
+      // Recarregar dados
+      emit('clienteExcluido')
+    } else {
+      mostrarToast('Erro ao excluir cliente!')
+      console.error('Erro ao excluir:', error)
     }
+  } catch (e) {
+    mostrarToast('Erro inesperado!')
+    console.error('Erro:', e)
+    clienteParaExcluir.value = null
   }
 }
 
@@ -605,7 +688,8 @@ const formatarDataSimples = (dataString: string | null) => {
         if (dateComponents.length === 3) {
           const [day, month, year] = dateComponents
           if (day && month && year) {
-            const isoFormat = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+            // Adicionar horário meio-dia para evitar problemas de timezone
+            const isoFormat = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00`
             date = new Date(isoFormat)
           } else {
             throw new Error('Formato de data inválido')
@@ -646,7 +730,12 @@ const formatarDataSimples = (dataString: string | null) => {
 
 // Função para exportar para PDF
 const exportToPDF = async () => {
+  if (gerandoPDF.value) return
+  
   try {
+    gerandoPDF.value = true
+    mostrarToast('Gerando relatório PDF...')
+    
     const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
 
@@ -658,7 +747,8 @@ const exportToPDF = async () => {
     doc.setTextColor(255, 255, 255) // Texto branco
     doc.setFontSize(24)
     doc.setFont('helvetica', 'bold')
-    doc.text('Wise Digital', 20, 20)
+    const empresa = nomeEmpresa.value || 'Sistema de Relatórios'
+    doc.text(empresa, 20, 20)
 
     // Subtítulo
     doc.setFontSize(14)
@@ -689,46 +779,88 @@ const exportToPDF = async () => {
     doc.text(`Gerado em: ${dataFormatada}, ${horaFormatada}`, 20, 75)
     doc.text(`Total de clientes: ${props.clientes.length}`, 20, 85)
 
-    // Cabeçalho da tabela com fundo roxo
+    // Cabeçalho da tabela com fundo roxo - layout simples e organizado
     let yPosition = 100
     doc.setFillColor(102, 90, 228) // Cor roxa para cabeçalho
     doc.rect(20, yPosition - 10, 170, 15, 'F') // Retângulo roxo para cabeçalho
 
     // Texto do cabeçalho em branco
     doc.setTextColor(255, 255, 255)
-    doc.setFontSize(12)
+    doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.text('#', 25, yPosition - 2)
-    doc.text('Nome', 40, yPosition - 2)
-    doc.text('Telefone', 100, yPosition - 2)
-    doc.text('Atendimentos', 150, yPosition - 2)
+    doc.text('Nome', 35, yPosition - 2)
+    doc.text('Telefone', 85, yPosition - 2)
+    doc.text('Atend.', 125, yPosition - 2)
+    doc.text('Primeiro', 145, yPosition - 2)
+    doc.text('Último', 170, yPosition - 2)
 
     // Resetar cor do texto para preto
     doc.setTextColor(0, 0, 0)
-    yPosition += 10
+    yPosition += 15
+
+    // Função para formatar data de forma segura para PDF
+    const formatarDataPDF = (dataString: string | null): string => {
+      if (!dataString) return 'N/A'
+      
+      try {
+        let data: Date | null = null
+        
+        if (dataString.includes('/')) {
+          const parts = dataString.split(' ')
+          const datePart = parts[0]
+          
+          if (datePart) {
+            const dateComponents = datePart.split('/')
+            if (dateComponents.length === 3) {
+              const [day, month, year] = dateComponents
+              if (day && month && year) {
+                data = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+              }
+            }
+          }
+        } else if (dataString.includes('-')) {
+          data = new Date(dataString)
+        }
+        
+        if (data && !isNaN(data.getTime())) {
+          return data.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit'
+          }) // Apenas dia/mês para economizar espaço
+        }
+        
+        return 'N/A'
+      } catch (error) {
+        return 'N/A'
+      }
+    }
 
     // Dados dos clientes
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     props.clientes.forEach((cliente, index) => {
       if (yPosition > 270) {
         doc.addPage()
-        yPosition = 20
+        yPosition = 30
         
         // Repetir cabeçalho na nova página
         doc.setFillColor(102, 90, 228)
         doc.rect(20, yPosition - 10, 170, 15, 'F')
         doc.setTextColor(255, 255, 255)
-        doc.setFontSize(12)
+        doc.setFontSize(10)
         doc.setFont('helvetica', 'bold')
         doc.text('#', 25, yPosition - 2)
-        doc.text('Nome', 40, yPosition - 2)
-        doc.text('Telefone', 100, yPosition - 2)
-        doc.text('Atendimentos', 150, yPosition - 2)
+        doc.text('Nome', 35, yPosition - 2)
+        doc.text('Telefone', 85, yPosition - 2)
+        doc.text('Atend.', 125, yPosition - 2)
+        doc.text('Primeiro', 145, yPosition - 2)
+        doc.text('Último', 170, yPosition - 2)
+        
         doc.setTextColor(0, 0, 0)
-        doc.setFontSize(10)
+        yPosition += 15
+        doc.setFontSize(9)
         doc.setFont('helvetica', 'normal')
-        yPosition += 10
       }
 
       // Cor de fundo alternada para as linhas
@@ -739,25 +871,92 @@ const exportToPDF = async () => {
 
       // Dados da linha
       doc.text((index + 1).toString(), 25, yPosition)
-      doc.text(cliente.contact_name, 40, yPosition)
-      doc.text(cliente.contact_phone || 'N/A', 100, yPosition)
-      doc.text(cliente.total_atendimentos.toString(), 150, yPosition)
+      
+      // Nome (truncar se muito longo)
+      const nome = cliente.contact_name.length > 20 ? cliente.contact_name.substring(0, 20) + '...' : cliente.contact_name
+      doc.text(nome, 35, yPosition)
+      
+      // Telefone
+      const telefone = cliente.contact_phone || 'N/A'
+      doc.text(telefone, 85, yPosition)
+      
+      // Atendimentos
+      doc.text(cliente.total_atendimentos.toString(), 125, yPosition)
+      
+      // Primeiro contato
+      doc.text(formatarDataPDF(cliente.primeiro_atendimento), 145, yPosition)
+      
+      // Último contato
+      doc.text(formatarDataPDF(cliente.ultimo_atendimento), 170, yPosition)
       
       yPosition += 12
     })
 
     // Salvar o PDF
     doc.save('lista-clientes-atendimentos.pdf')
+    mostrarToast('PDF gerado com sucesso!')
   } catch (error) {
     console.error('Erro ao exportar PDF:', error)
-    alert('Erro ao exportar PDF. Tente novamente.')
+    mostrarToast('Erro ao gerar PDF!')
+  } finally {
+    gerandoPDF.value = false
   }
 }
 
 // Função para exportar para Excel
 const exportToExcel = async () => {
+  if (gerandoExcel.value) return
+  
   try {
+    gerandoExcel.value = true
+    mostrarToast('Gerando planilha Excel...')
+    
     const XLSX = await import('xlsx')
+
+    // Função para formatar data de forma segura
+    const formatarDataSegura = (dataString: string | null): string => {
+      if (!dataString) return 'N/A'
+      
+      try {
+        // Tentar múltiplos formatos de parsing
+        let data: Date | null = null
+        
+        // Se está no formato brasileiro DD/MM/YYYY
+        if (dataString.includes('/')) {
+          const parts = dataString.split(' ')
+          const datePart = parts[0]
+          
+          if (datePart) {
+            const dateComponents = datePart.split('/')
+            if (dateComponents.length === 3) {
+              const [day, month, year] = dateComponents
+              if (day && month && year) {
+                // Criar data explicitamente
+                data = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+              }
+            }
+          }
+        }
+        // Se está no formato ISO
+        else if (dataString.includes('-')) {
+          data = new Date(dataString)
+        }
+        
+        // Verificar se a data é válida
+        if (data && !isNaN(data.getTime())) {
+          return data.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          })
+        }
+        
+        return 'N/A'
+      } catch (error) {
+        console.error('Erro ao formatar data:', dataString, error)
+        return 'N/A'
+      }
+    }
 
     // Criar dados do cabeçalho
     const agora = new Date()
@@ -772,9 +971,10 @@ const exportToExcel = async () => {
     })
 
     // Preparar dados com todas as colunas conforme a nova estrutura
+    const empresa = nomeEmpresa.value || 'Sistema de Relatórios'
     const dadosExcel = [
       // Cabeçalho do sistema
-      ['Wise Digital - Sistema de Relatórios'],
+      [`${empresa} - Sistema de Relatórios`],
       ['Relatórios de Clientes dos Atendimentos'],
       [`Gerado em: ${dataFormatada}, ${horaFormatada}`],
       [`Total de registros: ${props.clientes.length}`],
@@ -790,8 +990,8 @@ const exportToExcel = async () => {
         cliente.contact_name,
         cliente.contact_phone || 'N/A',
         cliente.total_atendimentos.toString(),
-        cliente.primeiro_atendimento ? new Date(cliente.primeiro_atendimento).toLocaleDateString('pt-BR') : 'N/A',
-        cliente.ultimo_atendimento ? new Date(cliente.ultimo_atendimento).toLocaleDateString('pt-BR') : 'N/A'
+        formatarDataSegura(cliente.primeiro_atendimento),
+        formatarDataSegura(cliente.ultimo_atendimento)
       ])
     })
 
@@ -815,7 +1015,7 @@ const exportToExcel = async () => {
     
     // Mesclar células do título principal
     worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // Wise Digital - Sistema de Relatórios
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // [Empresa] - Sistema de Relatórios
       { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }, // Relatórios de Clientes dos Atendimentos
       { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }, // Gerado em
       { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } }  // Total de registros
@@ -826,9 +1026,12 @@ const exportToExcel = async () => {
 
     // Salvar arquivo
     XLSX.writeFile(workbook, 'clientes-dos-atendimentos.xlsx')
+    mostrarToast('Excel gerado com sucesso!')
   } catch (error) {
     console.error('Erro ao exportar Excel:', error)
-    alert('Erro ao exportar Excel. Tente novamente.')
+    mostrarToast('Erro ao gerar Excel!')
+  } finally {
+    gerandoExcel.value = false
   }
 }
 

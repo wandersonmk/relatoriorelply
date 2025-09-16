@@ -1,187 +1,269 @@
+import { useUsuario } from './useUsuario'
+
 export const useRelatorioPDF = () => {
+  const { nomeEmpresa, fetchUsuarioData } = useUsuario()
+
+  const formatarDataHora = (dataString: string | null): string => {
+    if (!dataString) return '-'
+    try {
+      const data = new Date(dataString)
+      return data.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return dataString
+    }
+  }
+
+  const formatarDataArquivo = (data: Date): string => {
+    return data.toISOString().split('T')[0] || ''
+  }
+
+  const truncarTexto = (texto: string | null, limite: number): string => {
+    if (!texto) return '-'
+    return texto.length > limite ? texto.substring(0, limite - 3) + '...' : texto
+  }
+
+  const formatarScore = (score: number | null): string => {
+    if (score === null || score === undefined) return '-'
+    return `${score}%`
+  }
+
+  const formatarTempo = (tempo: string | null): string => {
+    if (!tempo) return '-'
+    if (tempo.includes('minuto')) {
+      return tempo
+    }
+    const num = parseFloat(tempo)
+    if (!isNaN(num)) {
+      const minutos = Math.round(num)
+      return `${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`
+    }
+    return tempo
+  }
+
+  const classificarTempo = (tempo: string | null): string => {
+    if (!tempo) return '-'
+    const match = tempo.match(/(\d+)/)
+    if (match && match[1]) {
+      const minutos = parseInt(match[1])
+      if (minutos <= 3) return 'Rápido'
+      if (minutos <= 10) return 'Médio'
+      return 'Longo'
+    }
+    return '-'
+  }
+  
   const gerarPDF = async (dados: any[], filtros: any) => {
-    // Só executar no cliente
     if (process.server) {
       console.warn('[useRelatorioPDF] PDF não pode ser gerado no servidor')
       return
     }
 
+    console.log('[useRelatorioPDF] Iniciando geração de PDF com', dados.length, 'registros')
+
+    // Garantir que temos o nome da empresa
+    if (!nomeEmpresa.value) {
+      await fetchUsuarioData()
+    }
+    
+    const empresa = nomeEmpresa.value || 'Sistema de Relatórios'
+    console.log('[useRelatorioPDF] Nome da empresa:', empresa)
+
     try {
-      // Importações dinâmicas para evitar problemas no SSR
-      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable')
-      ])
+      console.log('[useRelatorioPDF] Importando bibliotecas...')
+      const jsPDF = await import('jspdf')
+      const autoTable = await import('jspdf-autotable')
       
-      // Criar nova instância do PDF com configuração UTF-8
-      const doc = new jsPDF('landscape', 'mm', 'a4')
-      
-      // Configurar fonte para suportar UTF-8 e caracteres especiais
+      console.log('[useRelatorioPDF] Bibliotecas importadas, criando documento...')
+      const doc = new jsPDF.default('portrait', 'mm', 'a4')
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
       
-      // === CABEÇALHO PRINCIPAL ===
-      // Fundo azul para o cabeçalho
-      doc.setFillColor(41, 128, 185)
-      doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F')
+      // Cabeçalho principal com gradiente azul
+      doc.setFillColor(52, 152, 219)
+      doc.rect(0, 0, 210, 40, 'F')
       
       // Título principal em branco
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(20)
+      doc.setFontSize(18)
       doc.setFont('helvetica', 'bold')
-      doc.text('RELATÓRIO DE ATENDIMENTOS PIZARRO', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' })
+      doc.text('RELATÓRIO DE ATENDIMENTOS', 105, 18, { align: 'center' })
       
       // Subtítulo com data/hora
-      doc.setFontSize(12)
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'normal')
       const agora = new Date()
       const dataHoraCompleta = `Gerado em: ${agora.toLocaleDateString('pt-BR', { 
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
       })} às ${agora.toLocaleTimeString('pt-BR')}`
-      doc.text(dataHoraCompleta, doc.internal.pageSize.getWidth() / 2, 25, { align: 'center' })
+      doc.text(dataHoraCompleta, 105, 28, { align: 'center' })
       
-      // === SEÇÃO DE FILTROS ===
-      let yPosition = 45
+      // Linha separadora
+      doc.setFillColor(44, 123, 189)
+      doc.rect(0, 35, 210, 5, 'F')
+
+      // Seção de filtros (se existirem)
+      let yPosition = 50
       doc.setTextColor(60, 60, 60)
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
       
       if (filtros.agente || filtros.cliente || filtros.dataInicio || filtros.dataFim) {
-        // Fundo cinza claro para os filtros
+        // Fundo cinza claro para filtros
         doc.setFillColor(248, 249, 250)
-        doc.rect(10, yPosition - 3, doc.internal.pageSize.getWidth() - 20, 25, 'F')
+        doc.rect(15, yPosition - 3, 180, 25, 'F')
         
-        doc.text('FILTROS APLICADOS:', 15, yPosition + 3)
+        // Borda dos filtros
+        doc.setDrawColor(220, 220, 220)
+        doc.setLineWidth(0.5)
+        doc.rect(15, yPosition - 3, 180, 25)
+        
+        doc.setFont('helvetica', 'bold')
+        doc.text('Filtros aplicados:', 20, yPosition + 3)
+        yPosition += 10
+        
         doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        yPosition += 8
+        doc.setFontSize(9)
         
         if (filtros.agente) {
-          doc.text(`• Agente: ${filtros.agente}`, 20, yPosition)
+          doc.text(`• Agente: ${filtros.agente}`, 25, yPosition)
           yPosition += 5
         }
         if (filtros.cliente) {
-          doc.text(`• Cliente: ${filtros.cliente}`, 20, yPosition)
+          doc.text(`• Cliente: ${filtros.cliente}`, 25, yPosition)
           yPosition += 5
         }
-        if (filtros.dataInicio) {
-          doc.text(`• Data Inicial: ${filtros.dataInicio}`, 20, yPosition)
+        if (filtros.dataInicio || filtros.dataFim) {
+          const periodo = filtros.dataInicio && filtros.dataFim 
+            ? `${filtros.dataInicio} até ${filtros.dataFim}`
+            : filtros.dataInicio 
+              ? `A partir de ${filtros.dataInicio}`
+              : `Até ${filtros.dataFim}`
+          doc.text(`• Período: ${periodo}`, 25, yPosition)
           yPosition += 5
         }
-        if (filtros.dataFim) {
-          doc.text(`• Data Final: ${filtros.dataFim}`, 20, yPosition)
-          yPosition += 5
-        }
-        yPosition += 8
+        
+        yPosition += 10
       }
       
-      // Preparar dados da tabela com os campos corretos da base de dados
-      const colunas = [
-        { header: 'Ticket', dataKey: 'ticket_number' },
-        { header: 'Agente', dataKey: 'agent_name' },
-        { header: 'Cliente', dataKey: 'contact_name' },
-        { header: 'Telefone', dataKey: 'contact_phone' },
-        { header: 'Tempo', dataKey: 'service_time' },
-        { header: 'Início', dataKey: 'service_start_time' },
-        { header: 'Score', dataKey: 'service_score' },
-        { header: 'Avaliação', dataKey: 'customer_note' }
-      ]
+      // Espaço antes da tabela
+      yPosition += 5
       
-      const linhas = dados.map((item, index) => ({
-        ticket_number: item.ticket_number || '-',
-        agent_name: truncarTexto(item.agent_name, 15),
-        contact_name: truncarTexto(item.contact_name, 15),
-        contact_phone: formatarTelefone(item.contact_phone),
-        service_time: item.service_time || '-',
-        service_start_time: formatarDataHora(item.service_start_time),
-        service_score: item.service_score || '-',
-        customer_note: item.customer_note || '-'
-      }))
+      console.log('[useRelatorioPDF] Configurando tabela...')
       
-      // === TABELA DE DADOS ===
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const availableWidth = pageWidth - 10 // 5mm margem de cada lado
+      // Preparar dados da tabela de forma otimizada para A4
+      const tableData = dados.map(item => [
+        truncarTexto(item.ticket_number, 8),
+        truncarTexto(item.agent_name, 12),
+        truncarTexto(item.contact_name, 12),
+        truncarTexto(item.contact_phone, 11),
+        formatarTempo(item.service_time),
+        formatarDataHora(item.service_start_time),
+        formatarScore(item.service_score),
+        classificarTempo(item.service_time)
+      ])
       
-      autoTable(doc, {
-        startY: yPosition,
-        head: [colunas.map(col => col.header)],
-        body: linhas.map(linha => colunas.map(col => linha[col.dataKey as keyof typeof linha])),
-        theme: 'striped',
-        tableWidth: availableWidth,
-        styles: {
-          fontSize: 6,
-          cellPadding: 1.5,
-          textColor: [33, 37, 41],
-          lineColor: [222, 226, 230],
-          lineWidth: 0.2,
-          font: 'helvetica',
-          overflow: 'linebreak'
-        },
-        headStyles: {
-          fillColor: [52, 144, 220],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          fontSize: 7,
-          halign: 'center',
-          cellPadding: 2
-        },
-        alternateRowStyles: {
-          fillColor: [248, 249, 250]
-        },
-        columnStyles: {
-          0: { cellWidth: availableWidth * 0.10, halign: 'center' }, // Ticket - 10%
-          1: { cellWidth: availableWidth * 0.15, halign: 'left' },   // Agente - 15%
-          2: { cellWidth: availableWidth * 0.15, halign: 'left' },   // Cliente - 15%
-          3: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Telefone - 12%
-          4: { cellWidth: availableWidth * 0.08, halign: 'center' }, // Tempo - 8%
-          5: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Início - 12%
-          6: { cellWidth: availableWidth * 0.20, halign: 'center' }, // Score - 20%
-          7: { cellWidth: availableWidth * 0.08, halign: 'center' }  // Avaliação - 8%
-        },
-        margin: { top: 10, left: 5, right: 5, bottom: 25 },
-        pageBreak: 'auto',
-        showHead: 'everyPage',
-        didDrawPage: (data: any) => {
-          // Linha decorativa no topo de cada página
-          doc.setDrawColor(41, 128, 185)
-          doc.setLineWidth(2)
-          doc.line(0, 0, doc.internal.pageSize.getWidth(), 0)
-        }
-      })
+      console.log('[useRelatorioPDF] Dados da tabela preparados:', tableData.length, 'linhas')
       
-      // === RODAPÉ PERSONALIZADO ===
-      const totalPaginas = doc.getNumberOfPages()
-      for (let i = 1; i <= totalPaginas; i++) {
-        doc.setPage(i)
+      // Usar autoTable com design melhorado para A4
+      try {
+        console.log('[useRelatorioPDF] Gerando tabela autoTable...')
         
-        // Linha decorativa no rodapé
-        doc.setDrawColor(41, 128, 185)
-        doc.setLineWidth(1)
-        doc.line(12, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 12, doc.internal.pageSize.getHeight() - 20)
+        ;(doc as any).autoTable({
+          head: [['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Score', 'Avaliação']],
+          body: tableData,
+          startY: yPosition,
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            valign: 'middle',
+            halign: 'center'
+          },
+          headStyles: {
+            fillColor: [52, 152, 219],
+            textColor: 255,
+            fontStyle: 'bold',
+            fontSize: 9,
+            halign: 'center'
+          },
+          alternateRowStyles: {
+            fillColor: [248, 249, 250]
+          },
+          columnStyles: {
+            0: { cellWidth: 18, halign: 'center' }, // Ticket
+            1: { cellWidth: 25, halign: 'left' },   // Agente
+            2: { cellWidth: 25, halign: 'left' },   // Cliente
+            3: { cellWidth: 22, halign: 'center' }, // Telefone
+            4: { cellWidth: 18, halign: 'center' }, // Tempo
+            5: { cellWidth: 32, halign: 'center' }, // Início
+            6: { cellWidth: 15, halign: 'center' }, // Score
+            7: { cellWidth: 20, halign: 'center' }  // Avaliação
+          },
+          margin: { left: 15, right: 15 },
+          tableLineColor: [220, 220, 220],
+          tableLineWidth: 0.5,
+          didDrawPage: (data: any) => {
+            // Rodapé em cada página
+            const pageCount = (doc as any).internal.getNumberOfPages()
+            const pageHeight = 297 // A4 height
+            
+            doc.setFontSize(8)
+            doc.setTextColor(128, 128, 128)
+            doc.setFont('helvetica', 'normal')
+            
+            // Total de registros (esquerda)
+            const textoTotal = `Total: ${dados.length} registros`
+            doc.text(textoTotal, 15, pageHeight - 10)
+            
+            // Data de geração (centro)  
+            const dataGeracao = `Gerado pela ${empresa}`
+            doc.text(dataGeracao, 105, pageHeight - 10, { align: 'center' })
+            
+            // Número da página (direita)
+            const numeroPagina = `Página ${data.pageNumber} de ${pageCount}`
+            doc.text(numeroPagina, 195, pageHeight - 10, { align: 'right' })
+          }
+        })
         
-        // Informações do rodapé
-        doc.setFontSize(9)
-        doc.setTextColor(100, 100, 100)
+        console.log('[useRelatorioPDF] AutoTable concluída com sucesso!')
+        
+      } catch (autoTableError) {
+        console.error('[useRelatorioPDF] Erro na autoTable:', autoTableError)
+        // Fallback manual se autoTable falhar
+        console.log('[useRelatorioPDF] Usando fallback manual...')
+        
+        let currentY = yPosition
+        const lineHeight = 6
+        
+        // Cabeçalho manual
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Ticket | Agente | Cliente | Telefone | Tempo | Início | Score | Avaliação', 15, currentY)
+        currentY += lineHeight * 2
+        
+        // Dados manual
         doc.setFont('helvetica', 'normal')
-        
-        // Total de registros (esquerda)
-        const textoTotal = `Total de registros encontrados: ${dados.length}`
-        doc.text(textoTotal, 15, doc.internal.pageSize.getHeight() - 12)
-        
-        // Data de geração (centro)
-        const dataGeracao = `Gerado pela Agência Pizarro`
-        doc.text(dataGeracao, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 12, { align: 'center' })
-        
-        // Número da página (direita)
-        const numeroPagina = `Página ${i} de ${totalPaginas}`
-        doc.text(numeroPagina, doc.internal.pageSize.getWidth() - 15, doc.internal.pageSize.getHeight() - 12, { align: 'right' })
+        tableData.forEach((row) => {
+          const linha = row.join(' | ')
+          doc.text(linha, 15, currentY)
+          currentY += lineHeight
+        })
       }
       
-      // Salvar o PDF com nome mais descritivo
+      console.log('[useRelatorioPDF] Salvando arquivo...')
+      
+      // Salvar o PDF
       const dataAtual = agora.toISOString().split('T')[0]
       const horaAtual = agora.toTimeString().split(' ')[0]?.replace(/:/g, '-') || 'horario'
-      const nomeArquivo = `Relatorio-Atendimentos-Pizarro-${dataAtual}-${horaAtual}.pdf`
+      const empresaLimpa = empresa.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-')
+      const nomeArquivo = `Relatorio-Atendimentos-${empresaLimpa}-${dataAtual}-${horaAtual}.pdf`
       doc.save(nomeArquivo)
+      
+      console.log('[useRelatorioPDF] PDF salvo com sucesso:', nomeArquivo)
       
       return { sucesso: true, nomeArquivo }
       
@@ -190,92 +272,6 @@ export const useRelatorioPDF = () => {
       return { sucesso: false, erro: error }
     }
   }
-  
-  // Funções auxiliares
-  const truncarTexto = (texto: string | null, tamanho: number): string => {
-    if (!texto) return '-'
-    return texto.length > tamanho ? texto.substring(0, tamanho - 3) + '...' : texto
-  }
-  
-  const formatarDataHora = (dataHora: string | null): string => {
-    if (!dataHora) return '-'
-    try {
-      // Tentar diferentes formatos de data
-      const data = new Date(dataHora)
-      
-      // Verificar se a data é válida
-      if (isNaN(data.getTime())) {
-        // Se não conseguir converter, retornar o texto original truncado
-        return truncarTexto(dataHora, 15)
-      }
-      
-      return `${data.toLocaleDateString('pt-BR')} ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-    } catch {
-      return truncarTexto(dataHora, 15)
-    }
-  }
-  
-  const formatarTelefone = (telefone: string | null): string => {
-    if (!telefone) return '-'
-    // Remover caracteres especiais e formatar
-    const numeroLimpo = telefone.replace(/\D/g, '')
-    if (numeroLimpo.length === 11) {
-      return `(${numeroLimpo.slice(0, 2)}) ${numeroLimpo.slice(2, 7)}-${numeroLimpo.slice(7)}`
-    } else if (numeroLimpo.length === 10) {
-      return `(${numeroLimpo.slice(0, 2)}) ${numeroLimpo.slice(2, 6)}-${numeroLimpo.slice(6)}`
-    }
-    return telefone
-  }
-  
-  const formatarClassificacao = (classificacao: string | null): string => {
-    if (!classificacao) return '-'
-    
-    // Limpar o texto de caracteres especiais e emojis
-    let textoLimpo = classificacao.trim()
-    
-    // Remover emojis e caracteres especiais
-    textoLimpo = textoLimpo.replace(/[^\w\sÀ-ÿ]/g, '').trim()
-    
-    // Mapear classificações conhecidas com texto simples
-    const mapeamento: { [key: string]: string } = {
-      'Vermelho': 'VERMELHO',
-      'Amarelo': 'AMARELO', 
-      'Verde': 'VERDE',
-      'Azul': 'AZUL',
-      'Laranja': 'LARANJA',
-      'Branco': 'BRANCO',
-      'Preto': 'PRETO'
-    }
-    
-    // Buscar correspondência case-insensitive
-    const chaveEncontrada = Object.keys(mapeamento).find(
-      chave => textoLimpo.toLowerCase().includes(chave.toLowerCase())
-    )
-    
-    if (chaveEncontrada) {
-      return mapeamento[chaveEncontrada]!
-    }
-    
-    // Se não encontrar, retornar o texto limpo em maiúsculas
-    return textoLimpo.toUpperCase() || 'N/A'
-  }
-  
-  const formatarScore = (score: string | null): string => {
-    if (!score) return '-'
-    
-    // Se já tem %, retornar como está
-    if (score.includes('%')) return score
-    
-    // Se é um número, adicionar %
-    const numeroScore = parseFloat(score)
-    if (!isNaN(numeroScore)) {
-      return `${numeroScore}%`
-    }
-    
-    return score
-  }
-  
-  return {
-    gerarPDF: async (dados: any[], filtros: any) => await gerarPDF(dados, filtros)
-  }
+
+  return { gerarPDF }
 }

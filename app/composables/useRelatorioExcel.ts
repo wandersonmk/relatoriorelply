@@ -1,4 +1,6 @@
 export const useRelatorioExcel = () => {
+  // Buscar nome da empresa
+  const { nomeEmpresa, fetchUsuarioData } = useUsuario()
   
   // Função para formatar telefone
   const formatarTelefone = (telefone: string | null): string => {
@@ -48,6 +50,13 @@ export const useRelatorioExcel = () => {
   // Função principal para gerar Excel
   const gerarExcel = async (dados: any[], filtros: any = {}) => {
     try {
+      // Garantir que temos o nome da empresa
+      if (!nomeEmpresa.value) {
+        await fetchUsuarioData()
+      }
+      
+      const empresa = nomeEmpresa.value || 'Sistema de Relatórios'
+      
       // Importação dinâmica do xlsx
       const XLSX = await import('xlsx')
       
@@ -63,7 +72,7 @@ export const useRelatorioExcel = () => {
       const dadosCabecalho = []
       
       // Título
-      dadosCabecalho.push(['RELATÓRIO DE ATENDIMENTOS'])
+      dadosCabecalho.push([`RELATÓRIO DE ATENDIMENTOS ${empresa.toUpperCase()}`])
       dadosCabecalho.push([`Gerado em: ${dataHoraCompleta}`])
       dadosCabecalho.push(['']) // Linha vazia
       
@@ -214,16 +223,17 @@ export const useRelatorioExcel = () => {
 
       // Adicionar metadados
       wb.Props = {
-        Title: 'Relatório de Atendimentos',
+        Title: `Relatório de Atendimentos ${empresa}`,
         Subject: 'Dados de atendimentos exportados',
-        Author: 'Sistema de Relatórios',
+        Author: empresa,
         CreatedDate: new Date()
       }
 
       // Gerar nome do arquivo com data/hora
       const agoraArquivo = new Date()
       const dataFormatada = agoraArquivo.toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_')
-      const nomeArquivo = `relatorio_atendimentos_${dataFormatada}.xlsx`
+      const empresaLimpa = empresa.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')
+      const nomeArquivo = `relatorio_atendimentos_${empresaLimpa}_${dataFormatada}.xlsx`
 
       // Fazer download
       XLSX.writeFile(wb, nomeArquivo)

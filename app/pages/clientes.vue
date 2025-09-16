@@ -56,11 +56,13 @@ if (isClient) {
 // Função para recarregar dados após exclusão
 const recarregarDados = async () => {
   if (isClient) {
-    const { fetchClientesAtendimento } = useClientesAtendimento()
+    const { clientes: clientesAtendimento, fetchClientesAtendimento } = useClientesAtendimento()
     isLoading.value = true
+    error.value = ''
     try {
       await fetchClientesAtendimento()
-      console.log('✅ Dados recarregados após exclusão')
+      clientes.value = clientesAtendimento.value
+      console.log('✅ Dados recarregados após exclusão:', clientes.value.length, 'clientes')
     } catch (e) {
       console.error('❌ Erro ao recarregar dados:', e)
       error.value = 'Erro ao recarregar dados.'
