@@ -6,8 +6,40 @@ export const useRelatorioPDF = () => {
   const formatarDataHora = (dataString: string | null): string => {
     if (!dataString) return '-'
     try {
-      const data = new Date(dataString)
-      return data.toLocaleDateString('pt-BR', {
+      // Tentar diferentes formatos de data
+      let data: Date
+      
+      if (dataString.includes('T')) {
+        data = new Date(dataString)
+      } else if (dataString.includes('/')) {
+        // Formato DD/MM/YYYY HH:MM ou similar
+        const partes = dataString.split(/[\/\s:]/)
+        if (partes.length >= 3 && partes[0] && partes[1] && partes[2]) {
+          const dia = parseInt(partes[0])
+          const mes = parseInt(partes[1]) - 1 // Mês base 0
+          const ano = parseInt(partes[2])
+          
+          // Se tem hora e minuto
+          let hora = 0, minuto = 0
+          if (partes.length >= 5 && partes[3] && partes[4]) {
+            hora = parseInt(partes[3]) || 0
+            minuto = parseInt(partes[4]) || 0
+          }
+          
+          data = new Date(ano, mes, dia, hora, minuto)
+        } else {
+          return dataString
+        }
+      } else {
+        data = new Date(dataString)
+      }
+      
+      // Verificar se a data é válida
+      if (isNaN(data.getTime())) {
+        return dataString
+      }
+      
+      return data.toLocaleString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -76,22 +108,22 @@ export const useRelatorioPDF = () => {
 
     try {
       console.log('[useRelatorioPDF] Importando bibliotecas...')
-      const jsPDF = await import('jspdf')
-      const autoTable = await import('jspdf-autotable')
+      const { default: jsPDF } = await import('jspdf')
+      await import('jspdf-autotable')
       
       console.log('[useRelatorioPDF] Bibliotecas importadas, criando documento...')
-      const doc = new jsPDF.default('portrait', 'mm', 'a4')
+      const doc = new jsPDF('landscape', 'mm', 'a4')
       doc.setFont('helvetica', 'normal')
       
       // Cabeçalho principal com gradiente azul
-      doc.setFillColor(52, 152, 219)
-      doc.rect(0, 0, 210, 40, 'F')
+      doc.setFillColor(102, 90, 228)
+      doc.rect(0, 0, 297, 35, 'F')
       
       // Título principal em branco
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(18)
       doc.setFont('helvetica', 'bold')
-      doc.text('RELATÓRIO DE ATENDIMENTOS', 105, 18, { align: 'center' })
+      doc.text('RELATÓRIO DE ATENDIMENTOS', 148.5, 18, { align: 'center' })
       
       // Subtítulo com data/hora
       doc.setFontSize(11)
@@ -100,14 +132,14 @@ export const useRelatorioPDF = () => {
       const dataHoraCompleta = `Gerado em: ${agora.toLocaleDateString('pt-BR', { 
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
       })} às ${agora.toLocaleTimeString('pt-BR')}`
-      doc.text(dataHoraCompleta, 105, 28, { align: 'center' })
+      doc.text(dataHoraCompleta, 148.5, 28, { align: 'center' })
       
       // Linha separadora
-      doc.setFillColor(44, 123, 189)
-      doc.rect(0, 35, 210, 5, 'F')
+      doc.setFillColor(85, 75, 190)
+      doc.rect(0, 30, 297, 5, 'F')
 
       // Seção de filtros (se existirem)
-      let yPosition = 50
+      let yPosition = 45
       doc.setTextColor(60, 60, 60)
       doc.setFontSize(10)
       doc.setFont('helvetica', 'normal')
@@ -115,12 +147,12 @@ export const useRelatorioPDF = () => {
       if (filtros.agente || filtros.cliente || filtros.dataInicio || filtros.dataFim) {
         // Fundo cinza claro para filtros
         doc.setFillColor(248, 249, 250)
-        doc.rect(15, yPosition - 3, 180, 25, 'F')
+        doc.rect(15, yPosition - 3, 267, 20, 'F')
         
         // Borda dos filtros
         doc.setDrawColor(220, 220, 220)
         doc.setLineWidth(0.5)
-        doc.rect(15, yPosition - 3, 180, 25)
+        doc.rect(15, yPosition - 3, 267, 20)
         
         doc.setFont('helvetica', 'bold')
         doc.text('Filtros aplicados:', 20, yPosition + 3)
@@ -155,12 +187,12 @@ export const useRelatorioPDF = () => {
       
       console.log('[useRelatorioPDF] Configurando tabela...')
       
-      // Preparar dados da tabela de forma otimizada para A4
+      // Preparar dados da tabela com truncamento ajustado
       const tableData = dados.map(item => [
-        truncarTexto(item.ticket_number, 8),
-        truncarTexto(item.agent_name, 12),
-        truncarTexto(item.contact_name, 12),
-        truncarTexto(item.contact_phone, 11),
+        truncarTexto(item.ticket_number, 10),
+        truncarTexto(item.agent_name, 18),
+        truncarTexto(item.contact_name, 25),  // Aumentado para 25 caracteres
+        truncarTexto(item.contact_phone, 15),
         formatarTempo(item.service_time),
         formatarDataHora(item.service_start_time),
         formatarScore(item.service_score),
@@ -169,63 +201,59 @@ export const useRelatorioPDF = () => {
       
       console.log('[useRelatorioPDF] Dados da tabela preparados:', tableData.length, 'linhas')
       
-      // Usar autoTable com design melhorado para A4
+      // Usar autoTable com configuração funcional
       try {
         console.log('[useRelatorioPDF] Gerando tabela autoTable...')
         
-        ;(doc as any).autoTable({
+        // Verificar se autoTable está disponível
+        if (typeof (doc as any).autoTable !== 'function') {
+          throw new Error('autoTable não está disponível')
+        }
+        
+        (doc as any).autoTable({
           head: [['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Score', 'Avaliação']],
           body: tableData,
           startY: yPosition,
+          theme: 'grid',
           styles: {
             fontSize: 8,
-            cellPadding: 3,
-            valign: 'middle',
-            halign: 'center'
+            cellPadding: 2,
+            overflow: 'linebreak',
+            lineColor: [220, 220, 220],
+            lineWidth: 0.3
           },
           headStyles: {
             fillColor: [52, 152, 219],
-            textColor: 255,
+            textColor: [255, 255, 255],
             fontStyle: 'bold',
             fontSize: 9,
             halign: 'center'
           },
-          alternateRowStyles: {
-            fillColor: [248, 249, 250]
+          bodyStyles: {
+            fillColor: [255, 255, 255]  // Cor única branca
           },
           columnStyles: {
-            0: { cellWidth: 18, halign: 'center' }, // Ticket
-            1: { cellWidth: 25, halign: 'left' },   // Agente
-            2: { cellWidth: 25, halign: 'left' },   // Cliente
-            3: { cellWidth: 22, halign: 'center' }, // Telefone
+            0: { cellWidth: 25, halign: 'center' }, // Ticket
+            1: { cellWidth: 35, halign: 'left' },   // Agente
+            2: { cellWidth: 55, halign: 'left' },   // Cliente (aumentado de 45 para 55)
+            3: { cellWidth: 35, halign: 'center' }, // Telefone
             4: { cellWidth: 18, halign: 'center' }, // Tempo
-            5: { cellWidth: 32, halign: 'center' }, // Início
+            5: { cellWidth: 40, halign: 'center' }, // Início
             6: { cellWidth: 15, halign: 'center' }, // Score
-            7: { cellWidth: 20, halign: 'center' }  // Avaliação
+            7: { cellWidth: 20, halign: 'center' }  // Avaliação (reduzido de 25 para 20)
           },
           margin: { left: 15, right: 15 },
-          tableLineColor: [220, 220, 220],
-          tableLineWidth: 0.5,
           didDrawPage: (data: any) => {
-            // Rodapé em cada página
             const pageCount = (doc as any).internal.getNumberOfPages()
-            const pageHeight = 297 // A4 height
+            const pageHeight = 210
             
             doc.setFontSize(8)
             doc.setTextColor(128, 128, 128)
             doc.setFont('helvetica', 'normal')
             
-            // Total de registros (esquerda)
-            const textoTotal = `Total: ${dados.length} registros`
-            doc.text(textoTotal, 15, pageHeight - 10)
-            
-            // Data de geração (centro)  
-            const dataGeracao = `Gerado pela ${empresa}`
-            doc.text(dataGeracao, 105, pageHeight - 10, { align: 'center' })
-            
-            // Número da página (direita)
-            const numeroPagina = `Página ${data.pageNumber} de ${pageCount}`
-            doc.text(numeroPagina, 195, pageHeight - 10, { align: 'right' })
+            doc.text(`Total de registros encontrados: ${dados.length}`, 15, pageHeight - 10)
+            doc.text(`Gerado pela ${empresa}`, 148.5, pageHeight - 10, { align: 'center' })
+            doc.text(`Página ${data.pageNumber} de ${pageCount}`, 282, pageHeight - 10, { align: 'right' })
           }
         })
         
@@ -233,23 +261,54 @@ export const useRelatorioPDF = () => {
         
       } catch (autoTableError) {
         console.error('[useRelatorioPDF] Erro na autoTable:', autoTableError)
-        // Fallback manual se autoTable falhar
-        console.log('[useRelatorioPDF] Usando fallback manual...')
+        console.log('[useRelatorioPDF] Usando fallback com tabela manual organizada...')
         
+        // Criar tabela manual bem organizada
         let currentY = yPosition
         const lineHeight = 6
+        const colWidths = [25, 35, 55, 35, 18, 40, 15, 20]  // Larguras ajustadas
+        const colPositions = [15, 40, 75, 130, 165, 183, 223, 238]
         
-        // Cabeçalho manual
-        doc.setFontSize(8)
+        // Cabeçalho da tabela manual
+        doc.setFillColor(52, 152, 219)
+        doc.rect(15, currentY - 3, 267, 8, 'F')
+        
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(9)
         doc.setFont('helvetica', 'bold')
-        doc.text('Ticket | Agente | Cliente | Telefone | Tempo | Início | Score | Avaliação', 15, currentY)
-        currentY += lineHeight * 2
         
-        // Dados manual
+        const headers = ['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Score', 'Avaliação']
+        headers.forEach((header, i) => {
+          const pos = colPositions[i] || 15
+          const width = colWidths[i] || 30
+          doc.text(header, pos + width/2, currentY + 2, { align: 'center' })
+        })
+        
+        currentY += 10
+        
+        // Dados da tabela manual (cor única com bordas)
+        doc.setTextColor(50, 50, 50)
+        doc.setFontSize(8)
         doc.setFont('helvetica', 'normal')
-        tableData.forEach((row) => {
-          const linha = row.join(' | ')
-          doc.text(linha, 15, currentY)
+        
+        tableData.forEach((row, index) => {
+          // Fundo branco para todos
+          doc.setFillColor(255, 255, 255)
+          doc.rect(15, currentY - 2, 267, lineHeight, 'F')
+          
+          // Linhas divisórias discretas
+          doc.setDrawColor(220, 220, 220)
+          doc.setLineWidth(0.2)
+          doc.line(15, currentY + lineHeight - 2, 282, currentY + lineHeight - 2)
+          
+          row.forEach((cell, i) => {
+            const align = (i === 0 || i === 3 || i === 4 || i === 5 || i === 6 || i === 7) ? 'center' : 'left'
+            const pos = colPositions[i] || 15
+            const width = colWidths[i] || 30
+            const x = align === 'center' ? pos + width/2 : pos + 2
+            doc.text(String(cell), x, currentY + 2, { align })
+          })
+          
           currentY += lineHeight
         })
       }
