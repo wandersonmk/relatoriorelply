@@ -280,6 +280,8 @@ interface Filtros {
   dataFinal: string
   agenteOuContato: string
   classificacao: string
+  empresa: string
+  lojaOuCnpj: string
 }
 
 // Usar o composable de relatórios
@@ -296,7 +298,9 @@ const filtros = ref<Filtros>({
   dataInicial: '',
   dataFinal: '',
   agenteOuContato: '',
-  classificacao: ''
+  classificacao: '',
+  empresa: '',
+  lojaOuCnpj: ''
 })
 
 // Carregar relatórios quando o componente for montado
@@ -373,7 +377,9 @@ function limparFiltros() {
     dataInicial: '',
     dataFinal: '',
     agenteOuContato: '',
-    classificacao: ''
+    classificacao: '',
+    empresa: '',
+    lojaOuCnpj: ''
   }
   console.log('Filtros limpos - os filtros agora são automáticos!')
 }
@@ -525,13 +531,13 @@ async function exportToPDF() {
     // Preparar dados para a tabela
     const tableData = relatoriosFiltrados.value.map((relatorio, index) => [
       (index + 1).toString(),
-      relatorio.nome_pessoa,
-      relatorio.telefone,
-      relatorio.nome_loja,
-      relatorio.cnpj,
-      `${relatorio.data_abertura_chamado} ${relatorio.hora_abertura_chamado}`,
-      relatorio.motivo_chamado,
-      relatorio.nome_empresa
+      relatorio.nome_pessoa || relatorio.contact_name || '',
+      relatorio.telefone || relatorio.contact_phone || '',
+      relatorio.nome_loja || '',
+      relatorio.cnpj || '',
+      `${relatorio.data_abertura_chamado || ''} ${relatorio.hora_abertura_chamado || ''}`.trim(),
+      relatorio.motivo_chamado || relatorio.contact_request || '',
+      relatorio.nome_empresa || ''
     ])
     
     // Configurar tabela
@@ -663,14 +669,14 @@ async function exportToExcel() {
     relatoriosFiltrados.value.forEach((relatorio, index) => {
       dadosCompletos.push([
         (index + 1).toString(),
-        relatorio.nome_pessoa,
-        relatorio.telefone,
-        relatorio.nome_loja,
-        relatorio.cnpj,
-        relatorio.data_abertura_chamado,
-        relatorio.hora_abertura_chamado,
-        relatorio.motivo_chamado,
-        relatorio.nome_empresa
+        relatorio.nome_pessoa || relatorio.contact_name || '',
+        relatorio.telefone || relatorio.contact_phone || '',
+        relatorio.nome_loja || '',
+        relatorio.cnpj || '',
+        relatorio.data_abertura_chamado || '',
+        relatorio.hora_abertura_chamado || '',
+        relatorio.motivo_chamado || relatorio.contact_request || '',
+        relatorio.nome_empresa || ''
       ])
     })
     

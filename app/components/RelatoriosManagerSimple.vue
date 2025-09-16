@@ -709,7 +709,7 @@ async function gerarRelatorioPDF() {
     const resultado = await gerarPDF(relatoriosFiltrados.value, dadosFiltros)
     
     const toast = await useToastSafe()
-    if (resultado.sucesso) {
+    if (resultado && resultado.sucesso) {
       toast.success(`PDF gerado com sucesso: ${resultado.nomeArquivo}`)
     } else {
       toast.error('Erro ao gerar PDF')

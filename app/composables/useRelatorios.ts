@@ -28,6 +28,15 @@ export const useRelatorios = () => {
     agent_solution: string | null
     customer_note: string | null
     service_summary: string | null
+    // Propriedades adicionais que aparecem no código
+    nome_pessoa?: string | null
+    telefone?: string | null
+    nome_loja?: string | null
+    cnpj?: string | null
+    data_abertura_chamado?: string | null
+    hora_abertura_chamado?: string | null
+    motivo_chamado?: string | null
+    nome_empresa?: string | null
   }
   
   // Estados reativos
