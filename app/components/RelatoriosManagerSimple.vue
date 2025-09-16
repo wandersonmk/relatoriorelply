@@ -25,14 +25,14 @@
 
     <!-- Filtros -->
     <div class="p-6 border-b border-border bg-muted/30">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Filtro por Data Inicial -->
         <div>
           <label class="block text-sm font-medium text-foreground mb-2">Data Inicial</label>
           <input
             v-model="filtros.dataInicial"
             type="date"
-            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            class="w-full px-2 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
 
@@ -42,8 +42,22 @@
           <input
             v-model="filtros.dataFinal"
             type="date"
-            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            class="w-full px-2 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
+        </div>
+
+        <!-- Filtro por Número do Ticket -->
+        <div class="relative">
+          <label class="block text-sm font-medium text-foreground mb-2">Ticket</label>
+          <input
+            v-model="filtros.numeroTicket"
+            type="text"
+            placeholder="Nº do ticket"
+            class="w-full px-2 py-2 border border-border rounded-lg bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <div v-if="processandoFiltro && filtros.numeroTicket" class="absolute right-3 top-9 text-muted-foreground">
+            <font-awesome-icon icon="spinner" class="animate-spin w-4 h-4" />
+          </div>
         </div>
 
         <!-- Filtro por Nome do Agente -->
@@ -52,8 +66,8 @@
           <input
             v-model="filtros.agenteOuContato"
             type="text"
-            placeholder="Digite nome do agente"
-            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Nome do agente"
+            class="w-full px-2 py-2 border border-border rounded-lg bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <div v-if="processandoFiltro && filtros.agenteOuContato" class="absolute right-3 top-9 text-muted-foreground">
             <font-awesome-icon icon="spinner" class="animate-spin w-4 h-4" />
@@ -62,12 +76,12 @@
 
         <!-- Filtro por Nome do Cliente -->
         <div class="relative">
-          <label class="block text-sm font-medium text-foreground mb-2">Nome do Cliente</label>
+          <label class="block text-sm font-medium text-foreground mb-2">Cliente</label>
           <input
             v-model="filtros.classificacao"
             type="text"
-            placeholder="Digite nome do cliente"
-            class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Nome do cliente"
+            class="w-full px-2 py-2 border border-border rounded-lg bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <div v-if="processandoFiltro && filtros.classificacao" class="absolute right-3 top-9 text-muted-foreground">
             <font-awesome-icon icon="spinner" class="animate-spin w-4 h-4" />
@@ -387,6 +401,7 @@ interface AtendimentoPizarro {
 interface Filtros {
   dataInicial: string
   dataFinal: string
+  numeroTicket: string     // Campo usado para filtro por número do ticket
   agenteOuContato: string  // Campo usado para filtro por agente
   classificacao: string    // Campo usado para filtro por nome do cliente
 }
@@ -410,6 +425,7 @@ const gerandoPDF = ref(false)
 const filtros = ref<Filtros>({
   dataInicial: '',
   dataFinal: '',
+  numeroTicket: '',
   agenteOuContato: '',
   classificacao: ''
 })
@@ -422,6 +438,7 @@ const atendimentoSelecionado = ref<AtendimentoPizarro | null>(null)
 const filtrosDebounce = ref<Filtros>({
   dataInicial: '',
   dataFinal: '',
+  numeroTicket: '',
   agenteOuContato: '',
   classificacao: ''
 })
@@ -432,15 +449,27 @@ const processandoFiltro = ref(false)
 // Timers separados para cada filtro
 let debounceTimerAgente: NodeJS.Timeout
 let debounceTimerCliente: NodeJS.Timeout
+let debounceTimerTicket: NodeJS.Timeout
 
 // Watcher para aplicar debounce nos filtros de texto
+watch(() => filtros.value.numeroTicket, (novoValor) => {
+  console.log('🎫 Watcher ticket chamado:', novoValor)
+  processandoFiltro.value = true
+  clearTimeout(debounceTimerTicket)
+  debounceTimerTicket = setTimeout(() => {
+    console.log('🎫 Aplicando filtro ticket após debounce:', novoValor)
+    filtrosDebounce.value.numeroTicket = novoValor
+    processandoFiltro.value = false
+  }, 100) // Reduzido para 100ms para filtrar mais rapidamente
+}, { immediate: true })
+
 watch(() => filtros.value.agenteOuContato, (novoValor) => {
   processandoFiltro.value = true
   clearTimeout(debounceTimerAgente)
   debounceTimerAgente = setTimeout(() => {
     filtrosDebounce.value.agenteOuContato = novoValor
     processandoFiltro.value = false
-  }, 300) // Reduzido para 300ms para carregamento mais rápido
+  }, 100) // Reduzido para 100ms para carregamento mais rápido
 }, { immediate: true })
 
 watch(() => filtros.value.classificacao, (novoValor) => {
@@ -449,7 +478,7 @@ watch(() => filtros.value.classificacao, (novoValor) => {
   debounceTimerCliente = setTimeout(() => {
     filtrosDebounce.value.classificacao = novoValor
     processandoFiltro.value = false
-  }, 300) // Reduzido para 300ms para carregamento mais rápido
+  }, 100) // Reduzido para 100ms para carregamento mais rápido
 }, { immediate: true })
 
 // Para as datas não precisamos de debounce, aplicar imediatamente
@@ -495,7 +524,7 @@ const relatoriosFiltrados = computed(() => {
   let resultado = relatoriosData.value
 
   // Filtro de data inicial - otimizado
-  if (filtros.value.dataInicial) {
+  if (filtrosDebounce.value.dataInicial) {
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
       try {
@@ -510,7 +539,7 @@ const relatoriosFiltrados = computed(() => {
           dataAtendimento = dataAtendimento.split(' ')[0]!
         }
         
-        return dataAtendimento >= filtros.value.dataInicial
+        return dataAtendimento >= filtrosDebounce.value.dataInicial
       } catch (e) {
         return false
       }
@@ -518,7 +547,7 @@ const relatoriosFiltrados = computed(() => {
   }
 
   // Filtro de data final - otimizado
-  if (filtros.value.dataFinal) {
+  if (filtrosDebounce.value.dataFinal) {
     resultado = resultado.filter(r => {
       if (!r.service_start_time) return false
       try {
@@ -533,11 +562,22 @@ const relatoriosFiltrados = computed(() => {
           dataAtendimento = dataAtendimento.split(' ')[0]!
         }
         
-        return dataAtendimento <= filtros.value.dataFinal
+        return dataAtendimento <= filtrosDebounce.value.dataFinal
       } catch (e) {
         return false
       }
     })
+  }
+
+  // Filtro de número do ticket - otimizado com debounce
+  if (filtrosDebounce.value.numeroTicket) {
+    const termo = filtrosDebounce.value.numeroTicket.toLowerCase()
+    console.log('🎫 Filtrando por ticket:', termo)
+    const resultadoAnterior = resultado.length
+    resultado = resultado.filter(r => 
+      r.ticket_number && r.ticket_number.toLowerCase().includes(termo)
+    )
+    console.log('🎫 Resultado filtro ticket:', `${resultadoAnterior} → ${resultado.length}`)
   }
 
   // Filtro de agente - otimizado com debounce
@@ -582,6 +622,7 @@ function limparFiltros() {
   filtros.value = {
     dataInicial: '',
     dataFinal: '',
+    numeroTicket: '',
     agenteOuContato: '',
     classificacao: ''
   }
@@ -590,11 +631,13 @@ function limparFiltros() {
   filtrosDebounce.value = {
     dataInicial: '',
     dataFinal: '',
+    numeroTicket: '',
     agenteOuContato: '',
     classificacao: ''
   }
   
   // Limpar qualquer timer pendente e estado de processamento
+  clearTimeout(debounceTimerTicket)
   clearTimeout(debounceTimerAgente)
   clearTimeout(debounceTimerCliente)
   processandoFiltro.value = false
