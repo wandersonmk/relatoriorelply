@@ -75,7 +75,7 @@ export const useRelatorioPDF = () => {
         yPosition += 8
       }
       
-      // Preparar dados da tabela com os novos campos solicitados
+      // Preparar dados da tabela com os campos corretos da base de dados
       const colunas = [
         { header: 'Ticket', dataKey: 'ticket_number' },
         { header: 'Agente', dataKey: 'agent_name' },
@@ -83,8 +83,8 @@ export const useRelatorioPDF = () => {
         { header: 'Telefone', dataKey: 'contact_phone' },
         { header: 'Tempo', dataKey: 'service_time' },
         { header: 'Início', dataKey: 'service_start_time' },
-        { header: 'Obs. Cliente', dataKey: 'contact_request' },
-        { header: 'Nota', dataKey: 'customer_note' }
+        { header: 'Score', dataKey: 'service_score' },
+        { header: 'Avaliação', dataKey: 'customer_note' }
       ]
       
       const linhas = dados.map((item, index) => ({
@@ -94,8 +94,8 @@ export const useRelatorioPDF = () => {
         contact_phone: formatarTelefone(item.contact_phone),
         service_time: item.service_time || '-',
         service_start_time: formatarDataHora(item.service_start_time),
-        contact_request: truncarTexto(item.contact_request, 20),
-        customer_note: truncarTexto(item.customer_note, 15)
+        service_score: item.service_score || '-',
+        customer_note: item.customer_note || '-'
       }))
       
       // === TABELA DE DADOS ===
@@ -109,8 +109,8 @@ export const useRelatorioPDF = () => {
         theme: 'striped',
         tableWidth: availableWidth,
         styles: {
-          fontSize: 7,
-          cellPadding: 2,
+          fontSize: 6,
+          cellPadding: 1.5,
           textColor: [33, 37, 41],
           lineColor: [222, 226, 230],
           lineWidth: 0.2,
@@ -121,22 +121,22 @@ export const useRelatorioPDF = () => {
           fillColor: [52, 144, 220],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 8,
+          fontSize: 7,
           halign: 'center',
-          cellPadding: 3
+          cellPadding: 2
         },
         alternateRowStyles: {
           fillColor: [248, 249, 250]
         },
         columnStyles: {
-          0: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Ticket - 12%
+          0: { cellWidth: availableWidth * 0.10, halign: 'center' }, // Ticket - 10%
           1: { cellWidth: availableWidth * 0.15, halign: 'left' },   // Agente - 15%
           2: { cellWidth: availableWidth * 0.15, halign: 'left' },   // Cliente - 15%
           3: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Telefone - 12%
-          4: { cellWidth: availableWidth * 0.10, halign: 'center' }, // Tempo - 10%
+          4: { cellWidth: availableWidth * 0.08, halign: 'center' }, // Tempo - 8%
           5: { cellWidth: availableWidth * 0.12, halign: 'center' }, // Início - 12%
-          6: { cellWidth: availableWidth * 0.14, halign: 'left' },   // Obs. Cliente - 14%
-          7: { cellWidth: availableWidth * 0.10, halign: 'left' }    // Nota - 10%
+          6: { cellWidth: availableWidth * 0.20, halign: 'center' }, // Score - 20%
+          7: { cellWidth: availableWidth * 0.08, halign: 'center' }  // Avaliação - 8%
         },
         margin: { top: 10, left: 5, right: 5, bottom: 25 },
         pageBreak: 'auto',

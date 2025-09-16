@@ -150,9 +150,9 @@
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Início</th>
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Solicitação</th>
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Classificação</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Nota</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Score</th>
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Solução</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Obs. Cliente</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Avaliação</th>
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Resumo</th>
               </tr>
             </thead>
@@ -209,7 +209,7 @@
                   <span class="text-foreground text-xs">{{ relatorio.service_classification || '-' }}</span>
                 </td>
                 
-                <!-- Pontuação do serviço -->
+                <!-- Pontuação do serviço (Score) -->
                 <td class="py-3 px-3">
                   <span class="text-foreground text-xs">{{ relatorio.service_score || '-' }}</span>
                 </td>
@@ -221,7 +221,7 @@
                   </span>
                 </td>
                 
-                <!-- Nota do cliente -->
+                <!-- Avaliação (customer_note) -->
                 <td class="py-3 px-3">
                   <span class="text-foreground text-xs" :title="relatorio.customer_note || '-'">
                     {{ truncateText(relatorio.customer_note, 30) }}
@@ -542,7 +542,7 @@ async function exportToPDF() {
     
     // Configurar tabela
     autoTable(doc, {
-      head: [['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Obs. Cliente', 'Nota']],
+      head: [['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Solicitação', 'Avaliação']],
       body: tableData,
       startY: startYTabela,
       theme: 'grid',
@@ -570,8 +570,8 @@ async function exportToPDF() {
         3: { cellWidth: 22 }, // Telefone
         4: { cellWidth: 18, halign: 'center' }, // Tempo
         5: { cellWidth: 22, halign: 'center' }, // Início
-        6: { cellWidth: 30 }, // Obs. Cliente
-        7: { cellWidth: 25 } // Nota
+        6: { cellWidth: 30 }, // Solicitação
+        7: { cellWidth: 25 } // Avaliação
       },
       margin: { left: 15, right: 15 }
     })
@@ -663,7 +663,7 @@ async function exportToExcel() {
     
     // Linha vazia e cabeçalho da tabela
     dadosCompletos.push([])
-    dadosCompletos.push(['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Obs. Cliente', 'Nota'])
+    dadosCompletos.push(['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Solicitação', 'Avaliação'])
     
     // Adicionar dados dos relatórios
     relatoriosFiltrados.value.forEach((relatorio, index) => {

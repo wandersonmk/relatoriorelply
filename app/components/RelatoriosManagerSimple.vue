@@ -151,9 +151,9 @@
               <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Início</th>
               <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Solicitação</th>
               <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Classificação</th>
-              <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Nota</th>
+              <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Score</th>
               <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Solução</th>
-              <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Obs. Cliente</th>
+              <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Avaliação</th>
               <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Resumo</th>
             </tr>
           </thead>
