@@ -705,8 +705,10 @@ function fecharModal() {
 
 // Função para gerar PDF
 async function gerarRelatorioPDF() {
+  const toast = await useToastSafe()
+  
+  // Verificar se há dados
   if (!relatoriosFiltrados.value || relatoriosFiltrados.value.length === 0) {
-    const toast = await useToastSafe()
     toast.warning('Nenhum dado para gerar PDF')
     return
   }
@@ -714,26 +716,15 @@ async function gerarRelatorioPDF() {
   try {
     gerandoPDF.value = true
     
-    // Preparar dados dos filtros para o PDF
-    const dadosFiltros = {
-      agente: filtrosDebounce.value.agenteOuContato,
-      cliente: filtrosDebounce.value.classificacao,
-      dataInicio: filtrosDebounce.value.dataInicial,
-      dataFim: filtrosDebounce.value.dataFinal
-    }
+    const resultado = await gerarPDF(relatoriosFiltrados.value, {})
     
-    // Gerar PDF com os dados filtrados
-    const resultado = await gerarPDF(relatoriosFiltrados.value, dadosFiltros)
-    
-    const toast = await useToastSafe()
     if (resultado && resultado.sucesso) {
       toast.success(`PDF gerado com sucesso: ${resultado.nomeArquivo}`)
     } else {
       toast.error('Erro ao gerar PDF')
     }
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error)
-    const toast = await useToastSafe()
+    console.error('[COMPONENTE] Erro:', error)
     toast.error('Erro ao gerar PDF')
   } finally {
     gerandoPDF.value = false
