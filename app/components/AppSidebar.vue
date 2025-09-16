@@ -15,7 +15,7 @@
       <div class="flex items-center p-4 border-b border-border">
         <div class="flex-1 min-w-0">
           <h1 class="text-lg font-bold truncate">
-            Wise Digital
+            {{ nomeEmpresa || 'Sistema de Relatórios' }}
           </h1>
           <p class="text-xs text-muted-foreground">Sistema de Relatório</p>
         </div>
@@ -147,7 +147,7 @@
       <div class="flex items-center justify-between p-4 border-b border-border">
         <div class="flex-1 min-w-0">
           <h1 class="text-lg font-bold truncate">
-            Wise Digital
+            {{ nomeEmpresa || 'Sistema de Relatórios' }}
           </h1>
           <p class="text-xs text-muted-foreground">Sistema de Relatório</p>
         </div>
@@ -304,7 +304,10 @@ const emit = defineEmits<{
   'close-mobile': []
 }>()
 
-// Composables - abordagem simplificada
+// Composables (seguros para SSR)
+const { nomeEmpresa, fetchUsuarioData, usuarioData } = useUsuario()
+
+// Estados locais - abordagem simplificada
 const userEmail = ref<string | null>(null)
 const userName = ref<string | null>(null)
 const isLoggedIn = ref(false)
@@ -315,6 +318,15 @@ if (process.client) {
   onMounted(async () => {
     toast.value = await useToastSafe()
     checkUserSession()
+    
+    // Watch para debug (dentro do onMounted para evitar erros de hidratação)
+    watch(nomeEmpresa, (newValue) => {
+      console.log('[AppSidebar] Nome da empresa atualizado:', newValue)
+    })
+
+    watch(usuarioData, (newValue) => {
+      console.log('[AppSidebar] Dados do usuário atualizados:', newValue)
+    })
   })
 }
 
@@ -337,7 +349,7 @@ if (process.client) {
 }
 
 // Função para verificar sessão do usuário
-const checkUserSession = () => {
+const checkUserSession = async () => {
   if (process.client) {
     try {
       // Método mais simples - verificar email salvo
@@ -346,6 +358,7 @@ const checkUserSession = () => {
         userEmail.value = savedEmail
         isLoggedIn.value = true
         console.log('[AppSidebar] Email encontrado:', savedEmail)
+        await fetchUsuarioData() // Buscar dados da empresa
         return
       }
       
@@ -357,6 +370,7 @@ const checkUserSession = () => {
           userEmail.value = parsed.user.email
           isLoggedIn.value = true
           console.log('[AppSidebar] Usuário encontrado no Supabase:', userEmail.value)
+          await fetchUsuarioData() // Buscar dados da empresa
           return
         }
       }
@@ -367,6 +381,7 @@ const checkUserSession = () => {
         userEmail.value = globalUser.value.email
         isLoggedIn.value = true
         console.log('[AppSidebar] Usuário do estado global:', userEmail.value)
+        await fetchUsuarioData() // Buscar dados da empresa
         return
       }
       

@@ -1,9 +1,18 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-
 export const useRelatorioPDF = () => {
-  const gerarPDF = (dados: any[], filtros: any) => {
+  const gerarPDF = async (dados: any[], filtros: any) => {
+    // Só executar no cliente
+    if (process.server) {
+      console.warn('[useRelatorioPDF] PDF não pode ser gerado no servidor')
+      return
+    }
+
     try {
+      // Importações dinâmicas para evitar problemas no SSR
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ])
+      
       // Criar nova instância do PDF com configuração UTF-8
       const doc = new jsPDF('landscape', 'mm', 'a4')
       
@@ -259,6 +268,6 @@ export const useRelatorioPDF = () => {
   }
   
   return {
-    gerarPDF
+    gerarPDF: async (dados: any[], filtros: any) => await gerarPDF(dados, filtros)
   }
 }
