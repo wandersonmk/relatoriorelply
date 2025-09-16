@@ -16,9 +16,15 @@ export const useRelatorioPDF = () => {
       // Criar documento em orientação horizontal (paisagem)
       const doc = new jsPDF('landscape')
 
-      // Cabeçalho do relatório - alinhado à esquerda
+      // Cabeçalho do relatório - fundo roxo com texto branco
+      // Criar retângulo roxo como fundo do cabeçalho
+      doc.setFillColor(102, 51, 153) // Cor roxa de fundo
+      doc.rect(10, 12, 265, 40, 'F') // Retângulo preenchido (x, y, width, height, style)
+      
+      // Texto branco sobre fundo roxo
+      doc.setTextColor(255, 255, 255) // Cor branca para o texto
       doc.setFontSize(18)
-      doc.text('RELATÓRIO DE ATENDIMENTOS', 15, 20) // Alinhado à esquerda
+      doc.text('RELATÓRIO DE ATENDIMENTOS', 15, 25) // Ajustado para ficar sobre o fundo
       
       doc.setFontSize(12)
       const dataGeracao = new Date().toLocaleDateString('pt-BR', {
@@ -30,11 +36,14 @@ export const useRelatorioPDF = () => {
         minute: '2-digit',
         second: '2-digit'
       })
-      doc.text(`Gerado em: ${dataGeracao}`, 15, 35) // Alinhado à esquerda
-      doc.text(`Total de registros: ${dados.length}`, 15, 45) // Alinhado à esquerda
+      doc.text(`Gerado em: ${dataGeracao}`, 15, 38) // Ajustado para ficar sobre o fundo
+      doc.text(`Total de registros: ${dados.length}`, 15, 48) // Ajustado para ficar sobre o fundo
+      
+      // Voltar para cor preta para informações de filtros
+      doc.setTextColor(0, 0, 0)
       
       // Informações de filtros se houver
-      let yPosition = 55
+      let yPosition = 60 // Ajustado para não sobrepor o fundo roxo
       if (filtros.dataInicio) {
         doc.text(`Período: ${filtros.dataInicio} até ${filtros.dataFim || 'atual'}`, 20, yPosition)
         yPosition += 10
@@ -44,10 +53,18 @@ export const useRelatorioPDF = () => {
         yPosition += 10
       }
       
-      // Cabeçalho da "tabela" com todas as colunas da imagem
+      // Cabeçalho da "tabela" com fundo roxo e texto branco
       yPosition += 10
+      
+      // Criar retângulo roxo como fundo do cabeçalho das colunas
+      doc.setFillColor(102, 51, 153) // Cor roxa de fundo
+      doc.rect(10, yPosition - 5, 265, 15, 'F') // Retângulo preenchido para o cabeçalho das colunas
+      
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
+      
+      // Aplicar cor branca ao texto das colunas
+      doc.setTextColor(255, 255, 255) // Cor branca para o texto
       
       // Posições das colunas (redistribuídas para melhor aproveitamento - 297mm de largura)
       const colunas = {
@@ -61,44 +78,47 @@ export const useRelatorioPDF = () => {
         avaliacao: 250
       }
       
-      doc.text('Ticket', colunas.ticket, yPosition)
-      doc.text('Agente', colunas.agente, yPosition)
-      doc.text('Cliente', colunas.cliente, yPosition)
-      doc.text('Telefone', colunas.telefone, yPosition)
-      doc.text('Tempo', colunas.tempo, yPosition)
-      doc.text('Início', colunas.inicio, yPosition)
-      doc.text('Score', colunas.score, yPosition)
-      doc.text('Avaliação', colunas.avaliacao, yPosition)
+      doc.text('Ticket', colunas.ticket, yPosition + 3) // Ajustado para ficar sobre o fundo
+      doc.text('Agente', colunas.agente, yPosition + 3)
+      doc.text('Cliente', colunas.cliente, yPosition + 3)
+      doc.text('Telefone', colunas.telefone, yPosition + 3)
+      doc.text('Tempo', colunas.tempo, yPosition + 3)
+      doc.text('Início', colunas.inicio, yPosition + 3)
+      doc.text('Score', colunas.score, yPosition + 3)
+      doc.text('Avaliação', colunas.avaliacao, yPosition + 3)
       
-      // Linha separadora
-      yPosition += 5
-      doc.line(15, yPosition, 275, yPosition) // Linha mais larga para paisagem
-      yPosition += 10
+      // Voltar para texto preto e remover linha separadora (já temos o fundo)
+      doc.setTextColor(0, 0, 0) // Voltar para texto preto
+      yPosition += 15
       
       // Dados (todos os registros com paginação automática)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       
       dados.forEach((item, index) => {
-        if (yPosition > 180) { // Nova página se necessário (paisagem tem menos altura)
+        if (yPosition > 175) { // Nova página se necessário (ajustado para novo layout)
           doc.addPage('landscape')
           yPosition = 20
           
-          // Repetir cabeçalho na nova página
+          // Repetir cabeçalho na nova página com fundo roxo
+          // Criar retângulo roxo como fundo do cabeçalho das colunas
+          doc.setFillColor(102, 51, 153) // Cor roxa de fundo
+          doc.rect(10, yPosition - 5, 265, 15, 'F') // Retângulo preenchido
+          
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(9)
-          doc.text('Ticket', colunas.ticket, yPosition)
-          doc.text('Agente', colunas.agente, yPosition)
-          doc.text('Cliente', colunas.cliente, yPosition)
-          doc.text('Telefone', colunas.telefone, yPosition)
-          doc.text('Tempo', colunas.tempo, yPosition)
-          doc.text('Início', colunas.inicio, yPosition)
-          doc.text('Score', colunas.score, yPosition)
-          doc.text('Avaliação', colunas.avaliacao, yPosition)
+          doc.setTextColor(255, 255, 255) // Cor branca para cabeçalho das colunas
+          doc.text('Ticket', colunas.ticket, yPosition + 3)
+          doc.text('Agente', colunas.agente, yPosition + 3)
+          doc.text('Cliente', colunas.cliente, yPosition + 3)
+          doc.text('Telefone', colunas.telefone, yPosition + 3)
+          doc.text('Tempo', colunas.tempo, yPosition + 3)
+          doc.text('Início', colunas.inicio, yPosition + 3)
+          doc.text('Score', colunas.score, yPosition + 3)
+          doc.text('Avaliação', colunas.avaliacao, yPosition + 3)
           
-          yPosition += 5
-          doc.line(15, yPosition, 275, yPosition)
-          yPosition += 10
+          doc.setTextColor(0, 0, 0) // Voltar para texto preto
+          yPosition += 15
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(8)
         }
