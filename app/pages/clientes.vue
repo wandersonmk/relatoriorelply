@@ -5,23 +5,49 @@ definePageMeta({
   layout: 'dashboard'
 })
 
-import { useClientes } from '../composables/useClientes'
+import { useClientesAtendimento, type ClienteAtendimento } from '../composables/useClientesAtendimento'
 
 const isLoading = ref(true)
 const error = ref('')
 const isClient = typeof window !== 'undefined'
 
-let clientes = ref([])
+const clientes = ref<ClienteAtendimento[]>([])
+
 if (isClient) {
-  const { clientes, fetchClientes } = useClientes()
+  const { clientes: clientesAtendimento, isLoading: loadingAtendimento, error: errorAtendimento, fetchClientesAtendimento } = useClientesAtendimento()
+  
   onMounted(async () => {
+    console.log('🚀 Carregando clientes da página...')
     isLoading.value = true
+    error.value = ''
+    
     try {
-      await fetchClientes()
+      await fetchClientesAtendimento()
+      clientes.value = clientesAtendimento.value
+      console.log('✅ Clientes carregados:', clientes.value.length)
     } catch (e) {
-      error.value = 'Erro ao carregar clientes.'
+      console.error('❌ Erro ao carregar clientes:', e)
+      error.value = 'Erro ao carregar clientes dos atendimentos.'
+    } finally {
+      isLoading.value = false
     }
-    isLoading.value = false
+  })
+
+  // Watch para erros do composable
+  watch(errorAtendimento, (newError) => {
+    if (newError) {
+      error.value = newError
+    }
+  })
+  
+  // Watch para loading do composable
+  watch(loadingAtendimento, (newLoading) => {
+    isLoading.value = newLoading
+  })
+
+  // Watch para atualizar clientes quando dados mudarem
+  watch(clientesAtendimento, (newClientes) => {
+    clientes.value = newClientes
   })
 } else {
   isLoading.value = false

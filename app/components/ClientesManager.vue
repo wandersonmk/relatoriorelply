@@ -85,14 +85,14 @@
               <tr class="border-b border-border">
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Nome</th>
                 <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Telefone</th>
-                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Empresa</th>
+                <th class="text-left py-2 px-3 font-medium text-muted-foreground text-xs">Atendimentos</th>
                 <th class="text-right py-2 px-3 font-medium text-muted-foreground text-xs">Ações</th>
               </tr>
             </thead>
             <tbody>
               <tr 
-                v-for="cliente in (clientesOrdenados ? clientesOrdenados.slice(0, clientesVisiveis) : [])" 
-                :key="cliente.id"
+                v-for="(cliente, index) in (clientesOrdenados ? clientesOrdenados.slice(0, clientesVisiveis) : [])" 
+                :key="`${cliente.contact_name}-${cliente.contact_phone}`"
                 class="border-b border-border/50 hover:bg-muted/30 transition-colors"
               >
                 <!-- Nome do cliente -->
@@ -101,18 +101,20 @@
                     <div class="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-2">
                       <font-awesome-icon icon="user" class="w-3 h-3 text-primary" />
                     </div>
-                    <span class="font-medium text-foreground text-sm">{{ cliente.nome }}</span>
+                    <span class="font-medium text-foreground text-sm">{{ cliente.contact_name }}</span>
                   </div>
                 </td>
                 
                 <!-- Telefone do cliente -->
                 <td class="py-3 px-3">
-                  <span class="text-foreground text-sm">{{ cliente.telefone }}</span>
+                  <span class="text-foreground text-sm">{{ cliente.contact_phone || 'Não informado' }}</span>
                 </td>
                 
-                <!-- Empresa do cliente -->
+                <!-- Número de atendimentos -->
                 <td class="py-3 px-3">
-                  <span class="text-foreground font-medium text-sm">{{ cliente.empresa }}</span>
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    {{ cliente.total_atendimentos }} atendimento{{ cliente.total_atendimentos === 1 ? '' : 's' }}
+                  </span>
                 </td>
                 
                 <!-- Botões de ação -->
@@ -120,6 +122,7 @@
                   <div class="flex items-center justify-end space-x-2">
                     <!-- Botão WhatsApp -->
                     <button
+                      v-if="cliente.contact_phone"
                       @click="abrirWhatsApp(cliente)"
                       class="p-2 text-green-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200 group"
                       title="Conversar no WhatsApp"
@@ -130,14 +133,14 @@
                       />
                     </button>
                     
-                    <!-- Botão de excluir -->
+                    <!-- Botão de histórico (substituindo excluir) -->
                     <button
-                      @click="confirmarExclusao(cliente)"
-                      class="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 group"
-                      title="Excluir cliente"
+                      @click="verHistorico(cliente)"
+                      class="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 group"
+                      title="Ver histórico de atendimentos"
                     >
                       <font-awesome-icon 
-                        icon="trash" 
+                        icon="history" 
                         class="w-4 h-4 group-hover:scale-110 transition-transform duration-200" 
                       />
                     </button>
@@ -146,7 +149,7 @@
               </tr>
 
               <!-- Sentinel para infinite scroll -->
-              <tr v-if="clientes && clientesVisiveis < clientes.length">
+              <tr v-if="props.clientes && clientesVisiveis < props.clientes.length">
                 <td :colspan="4">
                   <div ref="sentinel" style="height: 1px;"></div>
                 </td>
@@ -173,7 +176,7 @@
         
         <p class="text-muted-foreground text-center mb-6">
           Tem certeza que deseja excluir o cliente 
-          <strong class="text-foreground">{{ clienteParaExcluir.nome }}</strong>?
+          <strong class="text-foreground">{{ clienteParaExcluir.contact_name }}</strong>?
           <br>
           Esta ação não pode ser desfeita.
         </p>
@@ -198,18 +201,21 @@
 </template>
 
 <script setup lang="ts">
-// Usar o composable de clientes
-const { 
-  clientes, 
-  isLoading, 
-  error, 
-  fetchClientes, 
-  deleteCliente,
-  clearError 
-} = useClientes()
+import type { ClienteAtendimento } from '../composables/useClientesAtendimento'
+
+// Props recebidas da página
+interface Props {
+  clientes: ClienteAtendimento[]
+}
+
+const props = defineProps<Props>()
+
+// Estado para mock loading/error (já que os dados vem da página)
+const isLoading = ref(false)
+const error = ref('')
 
 // Estado para modal de confirmação de exclusão
-const clienteParaExcluir = ref<any>(null)
+const clienteParaExcluir = ref<ClienteAtendimento | null>(null)
 
 // Infinite scroll
 const clientesVisiveis = ref(10)
@@ -217,18 +223,33 @@ const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 onMounted(() => {
-  fetchClientes()
-})
-
-watch(
-  () => clientes.value?.length,
-  () => {
-    if (sentinel.value && clientes.value && clientes.value.length > 10) {
+  // Setup infinite scroll
+  nextTick(() => {
+    if (sentinel.value && props.clientes && props.clientes.length > 10) {
       if (!observer) {
         observer = new IntersectionObserver((entries) => {
           const entry = entries[0]
           if (entry && entry.isIntersecting) {
-            if (clientesVisiveis.value < clientes.value.length) {
+            if (clientesVisiveis.value < props.clientes.length) {
+              clientesVisiveis.value += 10
+            }
+          }
+        })
+        observer.observe(sentinel.value)
+      }
+    }
+  })
+})
+
+watch(
+  () => props.clientes?.length,
+  () => {
+    if (sentinel.value && props.clientes && props.clientes.length > 10) {
+      if (!observer) {
+        observer = new IntersectionObserver((entries) => {
+          const entry = entries[0]
+          if (entry && entry.isIntersecting) {
+            if (clientesVisiveis.value < props.clientes.length) {
               clientesVisiveis.value += 10
             }
           }
@@ -239,14 +260,14 @@ watch(
   }
 )
 
-// Função para recarregar clientes
+// Função para recarregar clientes (placeholder - página é que controla)
 const recarregarClientes = () => {
-  clearError()
-  fetchClientes()
+  // Nada aqui, apenas placeholder para o template
+  window.location.reload()
 }
 
 // Função para confirmar exclusão
-const confirmarExclusao = (cliente: any) => {
+const confirmarExclusao = (cliente: ClienteAtendimento) => {
   clienteParaExcluir.value = cliente
 }
 
@@ -255,20 +276,28 @@ const cancelarExclusao = () => {
   clienteParaExcluir.value = null
 }
 
-// Função para excluir cliente
+// Função para excluir cliente (placeholder - dados vem dos atendimentos)
 const excluirCliente = async () => {
   if (clienteParaExcluir.value) {
-    await deleteCliente(clienteParaExcluir.value.id)
+    // Para clientes dos atendimentos, não implementamos exclusão direta
+    // Apenas fechamos o modal
     clienteParaExcluir.value = null
-    await fetchClientes() // Recarregar lista
+    alert('Esta funcionalidade não está disponível para clientes dos atendimentos.')
   }
 }
 
 // Função para abrir WhatsApp
-const abrirWhatsApp = (cliente: any) => {
-  const numeroLimpo = cliente.telefone.replace(/\D/g, '')
+const abrirWhatsApp = (cliente: ClienteAtendimento) => {
+  if (!cliente.contact_phone) return
+  const numeroLimpo = cliente.contact_phone.replace(/\D/g, '')
   const url = `https://wa.me/55${numeroLimpo}`
   window.open(url, '_blank')
+}
+
+// Função para ver histórico de atendimentos
+const verHistorico = (cliente: ClienteAtendimento) => {
+  // Por enquanto, apenas um alerta. Poderia abrir um modal com detalhes
+  alert(`Histórico de ${cliente.contact_name}:\n- Total de atendimentos: ${cliente.total_atendimentos}\n- Primeiro atendimento: ${cliente.primeiro_atendimento ? new Date(cliente.primeiro_atendimento).toLocaleDateString('pt-BR') : 'N/A'}\n- Último atendimento: ${cliente.ultimo_atendimento ? new Date(cliente.ultimo_atendimento).toLocaleDateString('pt-BR') : 'N/A'}`)
 }
 
 // Função para exportar para PDF
@@ -298,7 +327,7 @@ const exportToPDF = async () => {
     // Título da seção
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('Lista de Clientes', 20, 65)
+    doc.text('Lista de Clientes dos Atendimentos', 20, 65)
 
     // Informações de geração
     doc.setFontSize(10)
@@ -314,7 +343,7 @@ const exportToPDF = async () => {
       minute: '2-digit'
     })
     doc.text(`Gerado em: ${dataFormatada}, ${horaFormatada}`, 20, 75)
-    doc.text(`Total de clientes: ${clientes.value.length}`, 20, 85)
+    doc.text(`Total de clientes: ${props.clientes.length}`, 20, 85)
 
     // Cabeçalho da tabela com fundo roxo
     let yPosition = 100
@@ -328,7 +357,7 @@ const exportToPDF = async () => {
     doc.text('#', 25, yPosition - 2)
     doc.text('Nome', 40, yPosition - 2)
     doc.text('Telefone', 100, yPosition - 2)
-    doc.text('Empresa', 150, yPosition - 2)
+    doc.text('Atendimentos', 150, yPosition - 2)
 
     // Resetar cor do texto para preto
     doc.setTextColor(0, 0, 0)
@@ -337,7 +366,7 @@ const exportToPDF = async () => {
     // Dados dos clientes
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
-    clientes.value.forEach((cliente, index) => {
+    props.clientes.forEach((cliente, index) => {
       if (yPosition > 270) {
         doc.addPage()
         yPosition = 20
@@ -351,7 +380,7 @@ const exportToPDF = async () => {
         doc.text('#', 25, yPosition - 2)
         doc.text('Nome', 40, yPosition - 2)
         doc.text('Telefone', 100, yPosition - 2)
-        doc.text('Empresa', 150, yPosition - 2)
+        doc.text('Atendimentos', 150, yPosition - 2)
         doc.setTextColor(0, 0, 0)
         doc.setFontSize(10)
         doc.setFont('helvetica', 'normal')
@@ -366,15 +395,15 @@ const exportToPDF = async () => {
 
       // Dados da linha
       doc.text((index + 1).toString(), 25, yPosition)
-      doc.text(cliente.nome, 40, yPosition)
-      doc.text(cliente.telefone, 100, yPosition)
-      doc.text(cliente.empresa || 'Não informado', 150, yPosition)
+      doc.text(cliente.contact_name, 40, yPosition)
+      doc.text(cliente.contact_phone || 'N/A', 100, yPosition)
+      doc.text(cliente.total_atendimentos.toString(), 150, yPosition)
       
       yPosition += 12
     })
 
     // Salvar o PDF
-    doc.save('lista-clientes.pdf')
+    doc.save('lista-clientes-atendimentos.pdf')
   } catch (error) {
     console.error('Erro ao exportar PDF:', error)
     alert('Erro ao exportar PDF. Tente novamente.')
@@ -398,30 +427,27 @@ const exportToExcel = async () => {
       minute: '2-digit'
     })
 
-    // Preparar dados com todas as colunas conforme a imagem
+    // Preparar dados com todas as colunas conforme a nova estrutura
     const dadosExcel = [
       // Cabeçalho do sistema
       ['Wise Digital - Sistema de Relatórios'],
-      ['Relatórios de Clientes'],
+      ['Relatórios de Clientes dos Atendimentos'],
       [`Gerado em: ${dataFormatada}, ${horaFormatada}`],
-      [`Total de registros: ${clientes.value.length}`],
+      [`Total de registros: ${props.clientes.length}`],
       [], // Linha vazia
       // Cabeçalho da tabela
-      ['#', 'Nome', 'Telefone', 'Loja', 'CNPJ', 'Data Abertura', 'Hora Abertura', 'Motivo', 'Empresa']
+      ['#', 'Nome', 'Telefone', 'Total Atendimentos', 'Primeiro Contato', 'Último Contato']
     ]
 
     // Adicionar dados dos clientes
-    clientes.value.forEach((cliente, index) => {
+    props.clientes.forEach((cliente, index) => {
       dadosExcel.push([
         (index + 1).toString(), // Numeração
-        cliente.nome,
-        cliente.telefone,
-        'Loja Centro', // Valor padrão ou pode vir do cliente se existir
-        '12.345.678/0001-90', // Valor padrão ou pode vir do cliente se existir
-        new Date(cliente.created_at).toLocaleDateString('pt-BR'),
-        new Date(cliente.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        'Cliente cadastrado', // Motivo padrão
-        cliente.empresa || 'Não informado'
+        cliente.contact_name,
+        cliente.contact_phone || 'N/A',
+        cliente.total_atendimentos.toString(),
+        cliente.primeiro_atendimento ? new Date(cliente.primeiro_atendimento).toLocaleDateString('pt-BR') : 'N/A',
+        cliente.ultimo_atendimento ? new Date(cliente.ultimo_atendimento).toLocaleDateString('pt-BR') : 'N/A'
       ])
     })
 
@@ -432,14 +458,11 @@ const exportToExcel = async () => {
     // Definir larguras das colunas
     const columnWidths = [
       { wch: 5 },  // #
-      { wch: 20 }, // Nome
+      { wch: 25 }, // Nome
       { wch: 15 }, // Telefone
-      { wch: 15 }, // Loja
-      { wch: 20 }, // CNPJ
-      { wch: 12 }, // Data Abertura
-      { wch: 12 }, // Hora Abertura
-      { wch: 20 }, // Motivo
-      { wch: 15 }  // Empresa
+      { wch: 15 }, // Total Atendimentos
+      { wch: 15 }, // Primeiro Contato
+      { wch: 15 }  // Último Contato
     ]
     worksheet['!cols'] = columnWidths
 
@@ -448,17 +471,17 @@ const exportToExcel = async () => {
     
     // Mesclar células do título principal
     worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, // Wise Digital - Sistema de Relatórios
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }, // Relatórios de Clientes
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 8 } }, // Gerado em
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 8 } }  // Total de registros
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // Wise Digital - Sistema de Relatórios
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }, // Relatórios de Clientes dos Atendimentos
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }, // Gerado em
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } }  // Total de registros
     ]
 
     // Adicionar worksheet ao workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatórios de Clientes')
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes dos Atendimentos')
 
     // Salvar arquivo
-    XLSX.writeFile(workbook, 'relatorios-clientes.xlsx')
+    XLSX.writeFile(workbook, 'clientes-dos-atendimentos.xlsx')
   } catch (error) {
     console.error('Erro ao exportar Excel:', error)
     alert('Erro ao exportar Excel. Tente novamente.')
@@ -468,9 +491,9 @@ const exportToExcel = async () => {
 // Computed para clientes ordenados por nome (A-Z)
 import { computed } from 'vue'
 const clientesOrdenados = computed(() => {
-  return clientes.value ? [...clientes.value].sort((a, b) => {
-    if (!a.nome || !b.nome) return 0
-    return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+  return props.clientes ? [...props.clientes].sort((a, b) => {
+    if (!a.contact_name || !b.contact_name) return 0
+    return a.contact_name.localeCompare(b.contact_name, 'pt-BR', { sensitivity: 'base' })
   }) : []
 })
 </script>
