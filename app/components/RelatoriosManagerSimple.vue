@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between p-6 border-b border-border">
       <div>
-        <h2 class="text-xl font-semibold text-foreground">Atendimentos Pizarro</h2>
+        <h2 class="text-xl font-semibold text-foreground">Atendimentos</h2>
         <p class="text-sm text-muted-foreground mt-1">Acompanhe todos os registros de atendimento</p>
         <p v-if="relatoriosFiltrados && relatoriosFiltrados.length > 0" class="text-xs text-muted-foreground mt-1">
           Total de registros: <span class="font-semibold text-primary">{{ relatoriosFiltrados.length }}</span>
