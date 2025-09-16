@@ -52,6 +52,23 @@ if (isClient) {
 } else {
   isLoading.value = false
 }
+
+// Função para recarregar dados após exclusão
+const recarregarDados = async () => {
+  if (isClient) {
+    const { fetchClientesAtendimento } = useClientesAtendimento()
+    isLoading.value = true
+    try {
+      await fetchClientesAtendimento()
+      console.log('✅ Dados recarregados após exclusão')
+    } catch (e) {
+      console.error('❌ Erro ao recarregar dados:', e)
+      error.value = 'Erro ao recarregar dados.'
+    } finally {
+      isLoading.value = false
+    }
+  }
+}
 </script>
 
 <template>
@@ -64,7 +81,10 @@ if (isClient) {
     />
     <!-- Conteúdo só aparece após carregamento client-side -->
     <div v-else class="space-y-6">
-      <ClientesManager :clientes="clientes" />
+      <ClientesManager 
+        :clientes="clientes" 
+        @clienteExcluido="recarregarDados"
+      />
       <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
     </div>
   </div>

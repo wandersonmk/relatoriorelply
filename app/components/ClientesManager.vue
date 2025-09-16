@@ -133,14 +133,26 @@
                       />
                     </button>
                     
-                    <!-- Botão de histórico (substituindo excluir) -->
+                    <!-- Botão de histórico -->
                     <button
                       @click="verHistorico(cliente)"
                       class="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 group"
                       title="Ver histórico de atendimentos"
                     >
                       <font-awesome-icon 
-                        icon="history" 
+                        icon="clipboard-list" 
+                        class="w-4 h-4 group-hover:scale-110 transition-transform duration-200" 
+                      />
+                    </button>
+                    
+                    <!-- Botão de excluir -->
+                    <button
+                      @click="confirmarExclusao(cliente)"
+                      class="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 group"
+                      title="Excluir cliente"
+                    >
+                      <font-awesome-icon 
+                        icon="trash" 
                         class="w-4 h-4 group-hover:scale-110 transition-transform duration-200" 
                       />
                     </button>
@@ -177,6 +189,8 @@
         <p class="text-muted-foreground text-center mb-6">
           Tem certeza que deseja excluir o cliente 
           <strong class="text-foreground">{{ clienteParaExcluir.contact_name }}</strong>?
+          <br><br>
+          <span class="text-red-600 font-medium">⚠️ Esta ação irá remover TODOS os {{ clienteParaExcluir.total_atendimentos }} atendimento{{ clienteParaExcluir.total_atendimentos === 1 ? '' : 's' }} deste cliente!</span>
           <br>
           Esta ação não pode ser desfeita.
         </p>
@@ -197,6 +211,156 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de histórico de atendimentos -->
+    <div 
+      v-if="clienteHistorico"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+    >
+      <div class="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-border">
+        <!-- Header do modal -->
+        <div class="flex items-center justify-between p-6 border-b border-border">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+              <font-awesome-icon icon="clipboard-list" class="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-foreground">
+                Histórico de Atendimentos
+              </h3>
+              <p class="text-sm text-muted-foreground">
+                {{ clienteHistorico.contact_name }} - {{ clienteHistorico.contact_phone }}
+              </p>
+            </div>
+          </div>
+          <button
+            @click="fecharHistorico"
+            class="p-2 hover:bg-muted rounded-lg transition-colors"
+            title="Fechar"
+          >
+            <font-awesome-icon icon="times" class="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        <!-- Resumo -->
+        <div class="p-4 bg-muted/30 border-b border-border">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-blue-600">{{ clienteHistorico.total_atendimentos }}</div>
+              <div class="text-sm text-muted-foreground">Total de Atendimentos</div>
+            </div>
+            <div class="text-center">
+              <div class="text-sm font-medium text-foreground">
+                {{ formatarDataSimples(clienteHistorico.primeiro_atendimento) }}
+              </div>
+              <div class="text-sm text-muted-foreground">Primeiro Atendimento</div>
+            </div>
+            <div class="text-center">
+              <div class="text-sm font-medium text-foreground">
+                {{ formatarDataSimples(clienteHistorico.ultimo_atendimento) }}
+              </div>
+              <div class="text-sm text-muted-foreground">Último Atendimento</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de atendimentos -->
+        <div class="flex-1 overflow-y-auto max-h-[50vh]">
+          <!-- Loading -->
+          <div v-if="loadingHistorico" class="flex items-center justify-center py-12">
+            <div class="flex flex-col items-center space-y-3">
+              <font-awesome-icon icon="spinner" class="w-8 h-8 text-blue-600 animate-spin" />
+              <p class="text-muted-foreground">Carregando histórico...</p>
+            </div>
+          </div>
+
+          <!-- Lista de atendimentos -->
+          <div v-else-if="historicoDetalhado.length > 0" class="p-4 space-y-4">
+            <div 
+              v-for="(atendimento, index) in historicoDetalhado" 
+              :key="index"
+              class="bg-muted/20 rounded-lg p-4 border border-border/50"
+            >
+              <!-- Header do atendimento -->
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                    <font-awesome-icon icon="ticket" class="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-foreground">{{ atendimento.ticket_number || `Atendimento #${index + 1}` }}</h4>
+                    <p class="text-xs text-muted-foreground">
+                      {{ formatarData(atendimento.service_start_time) }} • Agente: {{ atendimento.agent_name }}
+                    </p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Score: {{ atendimento.service_score }}
+                  </span>
+                  <div class="text-xs text-muted-foreground mt-1">
+                    {{ atendimento.service_time || 'Tempo não informado' }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Detalhes do atendimento -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <!-- Solicitação -->
+                <div v-if="atendimento.contact_request">
+                  <h5 class="font-medium text-foreground mb-1">Solicitação:</h5>
+                  <p class="text-muted-foreground">{{ atendimento.contact_request }}</p>
+                </div>
+
+                <!-- Classificação -->
+                <div v-if="atendimento.service_classification">
+                  <h5 class="font-medium text-foreground mb-1">Classificação:</h5>
+                  <p class="text-muted-foreground">{{ atendimento.service_classification }}</p>
+                </div>
+
+                <!-- Solução -->
+                <div v-if="atendimento.agent_solution" class="md:col-span-2">
+                  <h5 class="font-medium text-foreground mb-1">Solução:</h5>
+                  <p class="text-muted-foreground">{{ atendimento.agent_solution }}</p>
+                </div>
+
+                <!-- Nota do cliente -->
+                <div v-if="atendimento.customer_note" class="md:col-span-2">
+                  <h5 class="font-medium text-foreground mb-1">Feedback do Cliente:</h5>
+                  <p class="text-muted-foreground italic">"{{ atendimento.customer_note }}"</p>
+                </div>
+
+                <!-- Resumo -->
+                <div v-if="atendimento.service_summary" class="md:col-span-2">
+                  <h5 class="font-medium text-foreground mb-1">Resumo:</h5>
+                  <p class="text-muted-foreground">{{ atendimento.service_summary }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estado vazio -->
+          <div v-else class="flex items-center justify-center py-12">
+            <div class="flex flex-col items-center space-y-3">
+              <font-awesome-icon icon="exclamation-circle" class="w-12 h-12 text-muted-foreground/50" />
+              <p class="text-muted-foreground">Nenhum atendimento encontrado</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer do modal -->
+        <div class="p-4 border-t border-border bg-muted/20">
+          <div class="flex justify-end">
+            <button
+              @click="fecharHistorico"
+              class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -210,12 +374,22 @@ interface Props {
 
 const props = defineProps<Props>()
 
+// Eventos emitidos para a página pai
+const emit = defineEmits<{
+  clienteExcluido: []
+}>()
+
 // Estado para mock loading/error (já que os dados vem da página)
 const isLoading = ref(false)
 const error = ref('')
 
 // Estado para modal de confirmação de exclusão
 const clienteParaExcluir = ref<ClienteAtendimento | null>(null)
+
+// Estado para modal de histórico
+const clienteHistorico = ref<ClienteAtendimento | null>(null)
+const historicoDetalhado = ref<any[]>([])
+const loadingHistorico = ref(false)
 
 // Infinite scroll
 const clientesVisiveis = ref(10)
@@ -276,13 +450,35 @@ const cancelarExclusao = () => {
   clienteParaExcluir.value = null
 }
 
-// Função para excluir cliente (placeholder - dados vem dos atendimentos)
+// Função para excluir cliente (remove todos os atendimentos do cliente)
 const excluirCliente = async () => {
   if (clienteParaExcluir.value) {
-    // Para clientes dos atendimentos, não implementamos exclusão direta
-    // Apenas fechamos o modal
-    clienteParaExcluir.value = null
-    alert('Esta funcionalidade não está disponível para clientes dos atendimentos.')
+    try {
+      // Usar supabase para excluir todos os atendimentos do cliente
+      const supabase = useSupabaseClient()
+      
+      const { error } = await supabase
+        .from('Atendimentos_Pizarro')
+        .delete()
+        .eq('contact_name', clienteParaExcluir.value.contact_name)
+        .eq('contact_phone', clienteParaExcluir.value.contact_phone)
+      
+      if (error) {
+        console.error('Erro ao excluir cliente:', error)
+        alert('Erro ao excluir cliente. Tente novamente.')
+      } else {
+        console.log('✅ Cliente excluído com sucesso')
+        alert('Cliente excluído com sucesso!')
+        
+        // Emitir evento para a página recarregar os dados
+        emit('clienteExcluido')
+      }
+    } catch (e) {
+      console.error('Erro ao excluir cliente:', e)
+      alert('Erro ao excluir cliente. Tente novamente.')
+    } finally {
+      clienteParaExcluir.value = null
+    }
   }
 }
 
@@ -295,9 +491,157 @@ const abrirWhatsApp = (cliente: ClienteAtendimento) => {
 }
 
 // Função para ver histórico de atendimentos
-const verHistorico = (cliente: ClienteAtendimento) => {
-  // Por enquanto, apenas um alerta. Poderia abrir um modal com detalhes
-  alert(`Histórico de ${cliente.contact_name}:\n- Total de atendimentos: ${cliente.total_atendimentos}\n- Primeiro atendimento: ${cliente.primeiro_atendimento ? new Date(cliente.primeiro_atendimento).toLocaleDateString('pt-BR') : 'N/A'}\n- Último atendimento: ${cliente.ultimo_atendimento ? new Date(cliente.ultimo_atendimento).toLocaleDateString('pt-BR') : 'N/A'}`)
+const verHistorico = async (cliente: ClienteAtendimento) => {
+  clienteHistorico.value = cliente
+  loadingHistorico.value = true
+  historicoDetalhado.value = []
+  
+  try {
+    const supabase = useSupabaseClient()
+    
+    const { data, error } = await supabase
+      .from('Atendimentos_Pizarro')
+      .select('*')
+      .eq('contact_name', cliente.contact_name)
+      .eq('contact_phone', cliente.contact_phone)
+      .order('service_start_time', { ascending: false })
+    
+    if (error) {
+      console.error('Erro ao buscar histórico:', error)
+      alert('Erro ao carregar histórico de atendimentos.')
+    } else {
+      historicoDetalhado.value = data || []
+      console.log('✅ Histórico carregado:', data?.length, 'atendimentos')
+    }
+  } catch (e) {
+    console.error('Erro ao buscar histórico:', e)
+    alert('Erro ao carregar histórico de atendimentos.')
+  } finally {
+    loadingHistorico.value = false
+  }
+}
+
+// Função para fechar modal de histórico
+const fecharHistorico = () => {
+  clienteHistorico.value = null
+  historicoDetalhado.value = []
+}
+
+// Função para formatar datas considerando diferentes formatos
+const formatarData = (dataString: string | null) => {
+  if (!dataString) return 'N/A'
+  
+  try {
+    let date: Date
+    
+    // Se já está no formato brasileiro DD/MM/YYYY, usar diretamente
+    if (dataString.includes('/')) {
+      // Formato: "28/08/2025 22:26" -> já está no formato correto, só converter para Date
+      const parts = dataString.split(' ')
+      const datePart = parts[0]
+      const timePart = parts[1] || ''
+      
+      if (datePart) {
+        const dateComponents = datePart.split('/')
+        if (dateComponents.length === 3) {
+          const [day, month, year] = dateComponents
+          if (day && month && year) {
+            // Converter para formato ISO para criar Date, mas depois formatar como brasileiro
+            const isoFormat = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}${timePart ? ' ' + timePart : ''}`
+            date = new Date(isoFormat)
+          } else {
+            throw new Error('Formato de data inválido')
+          }
+        } else {
+          throw new Error('Formato de data inválido')
+        }
+      } else {
+        throw new Error('Formato de data inválido')
+      }
+    }
+    // Se está no formato ISO (YYYY-MM-DD), converter
+    else if (dataString.includes('-') && dataString.match(/^\d{4}-\d{2}-\d{2}/)) {
+      date = new Date(dataString)
+    }
+    // Fallback: tentar parsing direto
+    else {
+      date = new Date(dataString)
+    }
+    
+    // Verificar se a data é válida
+    if (isNaN(date.getTime())) {
+      throw new Error('Data inválida')
+    }
+    
+    // Sempre retornar no formato brasileiro DD/MM/YYYY HH:mm
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}`
+    
+  } catch (e) {
+    console.error('Erro ao formatar data:', dataString, e)
+    return 'Data inválida'
+  }
+}
+
+// Função para formatar apenas a data (sem hora) no formato DD/MM/YYYY
+const formatarDataSimples = (dataString: string | null) => {
+  if (!dataString) return 'N/A'
+  
+  try {
+    let date: Date
+    
+    // Se já está no formato brasileiro DD/MM/YYYY
+    if (dataString.includes('/')) {
+      const parts = dataString.split(' ')
+      const datePart = parts[0]
+      
+      if (datePart) {
+        const dateComponents = datePart.split('/')
+        if (dateComponents.length === 3) {
+          const [day, month, year] = dateComponents
+          if (day && month && year) {
+            const isoFormat = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+            date = new Date(isoFormat)
+          } else {
+            throw new Error('Formato de data inválido')
+          }
+        } else {
+          throw new Error('Formato de data inválido')
+        }
+      } else {
+        throw new Error('Formato de data inválido')
+      }
+    }
+    // Se está no formato ISO (YYYY-MM-DD)
+    else if (dataString.includes('-') && dataString.match(/^\d{4}-\d{2}-\d{2}/)) {
+      date = new Date(dataString)
+    }
+    // Fallback
+    else {
+      date = new Date(dataString)
+    }
+    
+    // Verificar se a data é válida
+    if (isNaN(date.getTime())) {
+      throw new Error('Data inválida')
+    }
+    
+    // Retornar apenas no formato DD/MM/YYYY
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+    
+    return `${day}/${month}/${year}`
+    
+  } catch (e) {
+    console.error('Erro ao formatar data simples:', dataString, e)
+    return 'Data inválida'
+  }
 }
 
 // Função para exportar para PDF

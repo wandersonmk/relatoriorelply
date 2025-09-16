@@ -33,7 +33,8 @@ import {
   faTicket,
   faSpinner,
   faEraser,
-  faGraduationCap
+  faGraduationCap,
+  faClipboardList
 } from '@fortawesome/free-solid-svg-icons'
 
 // This is important, we are going to let Nuxt worry about the CSS
@@ -74,7 +75,8 @@ library.add(
   faTicket,
   faSpinner,
   faEraser,
-  faGraduationCap
+  faGraduationCap,
+  faClipboardList
 )
 
 export default defineNuxtPlugin((nuxtApp) => {
