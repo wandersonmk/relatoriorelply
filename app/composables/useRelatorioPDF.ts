@@ -49,16 +49,16 @@ export const useRelatorioPDF = () => {
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       
-      // Posições das colunas (ajustadas para paisagem - 297mm de largura)
+      // Posições das colunas (redistribuídas para melhor aproveitamento - 297mm de largura)
       const colunas = {
         ticket: 15,
-        agente: 45,
-        cliente: 85,
+        agente: 40,
+        cliente: 75,
         telefone: 125,
         tempo: 155,
         inicio: 185,
-        score: 215,
-        avaliacao: 240
+        score: 225,
+        avaliacao: 250
       }
       
       doc.text('Ticket', colunas.ticket, yPosition)
@@ -72,15 +72,15 @@ export const useRelatorioPDF = () => {
       
       // Linha separadora
       yPosition += 5
-      doc.line(15, yPosition, 270, yPosition) // Linha mais larga para paisagem
-      yPosition += 8
+      doc.line(15, yPosition, 275, yPosition) // Linha mais larga para paisagem
+      yPosition += 10
       
       // Dados (todos os registros com paginação automática)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       
       dados.forEach((item, index) => {
-        if (yPosition > 190) { // Nova página se necessário (paisagem tem menos altura)
+        if (yPosition > 180) { // Nova página se necessário (paisagem tem menos altura)
           doc.addPage('landscape')
           yPosition = 20
           
@@ -97,33 +97,66 @@ export const useRelatorioPDF = () => {
           doc.text('Avaliação', colunas.avaliacao, yPosition)
           
           yPosition += 5
-          doc.line(15, yPosition, 270, yPosition)
-          yPosition += 8
+          doc.line(15, yPosition, 275, yPosition)
+          yPosition += 10
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(8)
         }
         
-        // Preparar dados truncados para caber nas colunas
-        const ticket = (item.ticket_number || '').substring(0, 10)
-        const agente = (item.agent_name || '').substring(0, 12)
-        const cliente = (item.contact_name || '').substring(0, 12)
-        const telefone = (item.contact_phone || '').substring(0, 12)
-        const tempo = (item.service_time || '').substring(0, 8)
+        // Preparar dados com melhor tratamento para nomes longos
+        const ticket = (item.ticket_number || '').substring(0, 8)
+        const agente = (item.agent_name || '').substring(0, 15)
+        const telefone = (item.contact_phone || '').substring(0, 15)
+        const tempo = (item.service_time || '').substring(0, 10)
         const inicio = (item.service_start_time || '').substring(0, 16)
-        const score = (item.service_score || '').substring(0, 6)
-        const avaliacao = (item.customer_note || '').substring(0, 15)
+        const score = (item.service_score || '').substring(0, 8)
+        const avaliacao = (item.customer_note || '').substring(0, 20)
+        
+        // Tratamento especial para nome do cliente (permitir quebra de linha)
+        const nomeCliente = item.contact_name || ''
+        let clienteLinhas = []
+        if (nomeCliente.length > 20) {
+          // Quebrar nome longo em duas linhas
+          const palavras = nomeCliente.split(' ')
+          let linha1 = ''
+          let linha2 = ''
+          
+          for (const palavra of palavras) {
+            if ((linha1 + palavra).length <= 20) {
+              linha1 += (linha1 ? ' ' : '') + palavra
+            } else {
+              linha2 += (linha2 ? ' ' : '') + palavra
+            }
+          }
+          clienteLinhas = [linha1, linha2.substring(0, 20)]
+        } else {
+          clienteLinhas = [nomeCliente]
+        }
         
         // Escrever dados nas posições
         doc.text(ticket, colunas.ticket, yPosition)
         doc.text(agente, colunas.agente, yPosition)
-        doc.text(cliente, colunas.cliente, yPosition)
+        doc.text(clienteLinhas[0], colunas.cliente, yPosition)
         doc.text(telefone, colunas.telefone, yPosition)
         doc.text(tempo, colunas.tempo, yPosition)
         doc.text(inicio, colunas.inicio, yPosition)
         doc.text(score, colunas.score, yPosition)
         doc.text(avaliacao, colunas.avaliacao, yPosition)
         
-        yPosition += 7
+        // Se o nome do cliente tem segunda linha, escrever ela
+        if (clienteLinhas.length > 1 && clienteLinhas[1]) {
+          yPosition += 6
+          doc.text(clienteLinhas[1], colunas.cliente, yPosition)
+        }
+        
+        yPosition += 8
+        
+        // Linha discreta de separação entre registros
+        doc.setDrawColor(200, 200, 200) // Cor cinza claro
+        doc.line(15, yPosition, 275, yPosition)
+        doc.setDrawColor(0, 0, 0) // Voltar para preto
+        
+        yPosition += 3
       })
       
       // Rodapé com total completo
