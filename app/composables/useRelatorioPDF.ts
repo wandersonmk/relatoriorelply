@@ -110,7 +110,21 @@ export const useRelatorioPDF = () => {
         const tempo = (item.service_time || '').substring(0, 10)
         const inicio = (item.service_start_time || '').substring(0, 16)
         const score = (item.service_score || '').substring(0, 8)
-        const avaliacao = (item.customer_note || '').substring(0, 20)
+        
+        // Tratamento especial para avaliação (customer_note) - mostrar como número + descrição
+        let avaliacao = ''
+        if (item.customer_note) {
+          const nota = item.customer_note.trim()
+          // Mapear as avaliações como mostrado na imagem
+          const avaliacaoMap: { [key: string]: string } = {
+            '1': '1 - Péssimo',
+            '2': '2 - Ruim', 
+            '3': '3 - Regular',
+            '4': '4 - Bom',
+            '5': '5 - Excelente'
+          }
+          avaliacao = avaliacaoMap[nota] || nota.substring(0, 15)
+        }
         
         // Tratamento especial para nome do cliente (permitir quebra de linha)
         const nomeCliente = item.contact_name || ''
