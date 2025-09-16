@@ -217,7 +217,7 @@ export const useRelatorioPDF = () => {
           theme: 'grid',
           styles: {
             fontSize: 8,
-            cellPadding: 2,
+            cellPadding: 3,
             overflow: 'linebreak',
             lineColor: [220, 220, 220],
             lineWidth: 0.3
@@ -233,16 +233,16 @@ export const useRelatorioPDF = () => {
             fillColor: [255, 255, 255]  // Cor única branca
           },
           columnStyles: {
-            0: { cellWidth: 25, halign: 'center' }, // Ticket
-            1: { cellWidth: 35, halign: 'left' },   // Agente
-            2: { cellWidth: 55, halign: 'left' },   // Cliente (aumentado de 45 para 55)
-            3: { cellWidth: 35, halign: 'center' }, // Telefone
-            4: { cellWidth: 18, halign: 'center' }, // Tempo
-            5: { cellWidth: 40, halign: 'center' }, // Início
-            6: { cellWidth: 15, halign: 'center' }, // Score
-            7: { cellWidth: 20, halign: 'center' }  // Avaliação (reduzido de 25 para 20)
+            0: { cellWidth: 28, halign: 'center' }, // Ticket
+            1: { cellWidth: 32, halign: 'left' },   // Agente
+            2: { cellWidth: 45, halign: 'left' },   // Cliente
+            3: { cellWidth: 32, halign: 'center' }, // Telefone
+            4: { cellWidth: 22, halign: 'center' }, // Tempo
+            5: { cellWidth: 38, halign: 'center' }, // Início
+            6: { cellWidth: 18, halign: 'center' }, // Score
+            7: { cellWidth: 30, halign: 'center' }  // Avaliação (à direita)
           },
-          margin: { left: 15, right: 15 },
+          margin: { left: 12, right: 12 },
           didDrawPage: (data: any) => {
             const pageCount = (doc as any).internal.getNumberOfPages()
             const pageHeight = 210
@@ -251,9 +251,9 @@ export const useRelatorioPDF = () => {
             doc.setTextColor(128, 128, 128)
             doc.setFont('helvetica', 'normal')
             
-            doc.text(`Total de registros encontrados: ${dados.length}`, 15, pageHeight - 10)
+            doc.text(`Total de registros encontrados: ${dados.length}`, 12, pageHeight - 10)
             doc.text(`Gerado pela ${empresa}`, 148.5, pageHeight - 10, { align: 'center' })
-            doc.text(`Página ${data.pageNumber} de ${pageCount}`, 282, pageHeight - 10, { align: 'right' })
+            doc.text(`Página ${data.pageNumber} de ${pageCount}`, 285, pageHeight - 10, { align: 'right' })
           }
         })
         
@@ -266,12 +266,12 @@ export const useRelatorioPDF = () => {
         // Criar tabela manual bem organizada
         let currentY = yPosition
         const lineHeight = 6
-        const colWidths = [25, 35, 55, 35, 18, 40, 15, 20]  // Larguras ajustadas
-        const colPositions = [15, 40, 75, 130, 165, 183, 223, 238]
+        const colWidths = [30, 36, 48, 36, 26, 40, 20, 34]  // Larguras ajustadas para caber na página
+        const colPositions = [12, 42, 78, 126, 162, 188, 228, 248]  // Posições reajustadas
         
-        // Cabeçalho da tabela manual
-        doc.setFillColor(52, 152, 219)
-        doc.rect(15, currentY - 3, 267, 8, 'F')
+        // Cabeçalho da tabela manual com cor roxa
+        doc.setFillColor(102, 90, 228)  // Mesma cor roxa do cabeçalho principal
+        doc.rect(12, currentY - 3, 270, 8, 'F')  // Largura ajustada para não ultrapassar
         
         doc.setTextColor(255, 255, 255)
         doc.setFontSize(9)
@@ -279,9 +279,21 @@ export const useRelatorioPDF = () => {
         
         const headers = ['Ticket', 'Agente', 'Cliente', 'Telefone', 'Tempo', 'Início', 'Score', 'Avaliação']
         headers.forEach((header, i) => {
-          const pos = colPositions[i] || 15
+          const pos = colPositions[i] || 12
           const width = colWidths[i] || 30
-          doc.text(header, pos + width/2, currentY + 2, { align: 'center' })
+          let headerAlign: 'center' | 'left' | 'right' = 'center'
+          let headerX = pos + width/2
+          
+          // Ticket alinhado à esquerda, Avaliação à direita
+          if (i === 0) {  // Ticket
+            headerAlign = 'left'
+            headerX = pos + 2
+          } else if (i === 7) {  // Avaliação
+            headerAlign = 'right'
+            headerX = pos + width - 2
+          }
+          
+          doc.text(header, headerX, currentY + 2, { align: headerAlign })
         })
         
         currentY += 10
@@ -294,18 +306,35 @@ export const useRelatorioPDF = () => {
         tableData.forEach((row, index) => {
           // Fundo branco para todos
           doc.setFillColor(255, 255, 255)
-          doc.rect(15, currentY - 2, 267, lineHeight, 'F')
+          doc.rect(12, currentY - 2, 270, lineHeight, 'F')  // Largura ajustada
           
           // Linhas divisórias discretas
           doc.setDrawColor(220, 220, 220)
           doc.setLineWidth(0.2)
-          doc.line(15, currentY + lineHeight - 2, 282, currentY + lineHeight - 2)
+          doc.line(12, currentY + lineHeight - 2, 282, currentY + lineHeight - 2)
           
           row.forEach((cell, i) => {
-            const align = (i === 0 || i === 3 || i === 4 || i === 5 || i === 6 || i === 7) ? 'center' : 'left'
-            const pos = colPositions[i] || 15
+            let align: 'center' | 'left' | 'right' = 'center'  // Padrão para colunas centrais
+            const pos = colPositions[i] || 12
             const width = colWidths[i] || 30
-            const x = align === 'center' ? pos + width/2 : pos + 2
+            let x = pos + width/2
+            
+            // Definir alinhamentos específicos
+            if (i === 0) {  // Ticket - esquerda
+              align = 'left'
+              x = pos + 2
+            } else if (i === 1) {  // Agente - esquerda
+              align = 'left'
+              x = pos + 2
+            } else if (i === 2) {  // Cliente - esquerda
+              align = 'left'
+              x = pos + 2
+            } else if (i === 7) {  // Avaliação - direita
+              align = 'right'
+              x = pos + width - 2
+            }
+            // Telefone, Tempo, Início, Score permanecem centralizados
+            
             doc.text(String(cell), x, currentY + 2, { align })
           })
           
