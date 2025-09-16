@@ -16,14 +16,26 @@ export const useRelatorioExcel = () => {
   // Função para formatar data e hora
   const formatarDataHora = (dataHora: string | null): string => {
     if (!dataHora) return '-'
+    
     try {
       const date = new Date(dataHora)
-      return `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })}`
-    } catch {
-      return dataHora
+      
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) {
+        console.warn('Data inválida:', dataHora)
+        return dataHora || '-'
+      }
+      
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (error) {
+      console.warn('Erro ao formatar data:', dataHora, error)
+      return dataHora || '-'
     }
   }
 
@@ -38,6 +50,45 @@ export const useRelatorioExcel = () => {
     try {
       // Importação dinâmica do xlsx
       const XLSX = await import('xlsx')
+      
+      // Preparar dados do cabeçalho com informações da exportação
+      const agora = new Date()
+      const dataHoraCompleta = `${agora.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      })} às ${agora.toLocaleTimeString('pt-BR')}`
+      
+      // Criar dados para o cabeçalho
+      const dadosCabecalho = []
+      
+      // Título
+      dadosCabecalho.push(['RELATÓRIO DE ATENDIMENTOS'])
+      dadosCabecalho.push([`Gerado em: ${dataHoraCompleta}`])
+      dadosCabecalho.push(['']) // Linha vazia
+      
+      // Filtros aplicados (se houver)
+      let temFiltros = false
+      if (filtros.agente || filtros.cliente || filtros.dataInicio || filtros.dataFim) {
+        dadosCabecalho.push(['FILTROS APLICADOS:'])
+        temFiltros = true
+        
+        if (filtros.agente) {
+          dadosCabecalho.push([`• Agente: ${filtros.agente}`])
+        }
+        if (filtros.cliente) {
+          dadosCabecalho.push([`• Cliente: ${filtros.cliente}`])
+        }
+        if (filtros.dataInicio) {
+          dadosCabecalho.push([`• Data Inicial: ${filtros.dataInicio}`])
+        }
+        if (filtros.dataFim) {
+          dadosCabecalho.push([`• Data Final: ${filtros.dataFim}`])
+        }
+      }
+      
+      // Adicionar linha vazia antes da tabela
+      dadosCabecalho.push([''])
       
       // Definir colunas do Excel (todas as colunas da tabela)
       const colunas = [
@@ -84,8 +135,22 @@ export const useRelatorioExcel = () => {
         return linha
       })
 
-      // Criar planilha
-      const ws = XLSX.utils.json_to_sheet(dadosExcel)
+      // Criar planilha vazia
+      const ws = XLSX.utils.aoa_to_sheet([])
+      
+      // Adicionar cabeçalho (informações do relatório)
+      XLSX.utils.sheet_add_aoa(ws, dadosCabecalho, { origin: 'A1' })
+      
+      // Calcular a linha onde começar a tabela de dados
+      const linhaInicioTabela = dadosCabecalho.length + 1
+      
+      // Adicionar cabeçalhos das colunas
+      const headers = colunas.map(col => col.header)
+      XLSX.utils.sheet_add_aoa(ws, [headers], { origin: `A${linhaInicioTabela}` })
+      
+      // Adicionar dados da tabela
+      const dadosTabela = dadosExcel.map(linha => colunas.map(col => linha[col.header]))
+      XLSX.utils.sheet_add_aoa(ws, dadosTabela, { origin: `A${linhaInicioTabela + 1}` })
       
       // Configurar largura das colunas
       const colWidths = [
@@ -105,6 +170,44 @@ export const useRelatorioExcel = () => {
       
       ws['!cols'] = colWidths
 
+      // Formatação especial para o título (primeira linha)
+      if (ws['A1']) {
+        ws['A1'].s = {
+          font: { bold: true, sz: 16, color: { rgb: "0066CC" } },
+          alignment: { horizontal: "center" }
+        }
+      }
+      
+      // Formatação para a data de geração (segunda linha)
+      if (ws['A2']) {
+        ws['A2'].s = {
+          font: { italic: true, sz: 10 },
+          alignment: { horizontal: "center" }
+        }
+      }
+      
+      // Formatação para o título dos filtros
+      let linhaFiltros = 4
+      if (temFiltros && ws[`A${linhaFiltros}`]) {
+        ws[`A${linhaFiltros}`].s = {
+          font: { bold: true, sz: 12 },
+          fill: { fgColor: { rgb: "F0F0F0" } }
+        }
+      }
+      
+      // Formatação para os cabeçalhos da tabela
+      const linhaCabecalho = linhaInicioTabela
+      for (let col = 0; col < colunas.length; col++) {
+        const cellAddr = XLSX.utils.encode_cell({ r: linhaCabecalho - 1, c: col })
+        if (ws[cellAddr]) {
+          ws[cellAddr].s = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "0066CC" } },
+            alignment: { horizontal: "center" }
+          }
+        }
+      }
+
       // Criar workbook
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Relatório de Atendimentos')
@@ -118,8 +221,8 @@ export const useRelatorioExcel = () => {
       }
 
       // Gerar nome do arquivo com data/hora
-      const agora = new Date()
-      const dataFormatada = agora.toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_')
+      const agoraArquivo = new Date()
+      const dataFormatada = agoraArquivo.toISOString().slice(0, 16).replace(/[:-]/g, '').replace('T', '_')
       const nomeArquivo = `relatorio_atendimentos_${dataFormatada}.xlsx`
 
       // Fazer download
