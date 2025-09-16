@@ -10,8 +10,9 @@
         </p>
       </div>
       
-      <!-- Botão PDF no header -->
-      <div>
+      <!-- Botões de exportação no header -->
+      <div class="flex items-center space-x-3">
+        <!-- Botão PDF -->
         <button
           @click="gerarRelatorioPDF"
           :disabled="!relatoriosFiltrados || relatoriosFiltrados.length === 0 || gerandoPDF"
@@ -19,6 +20,16 @@
         >
           <font-awesome-icon :icon="gerandoPDF ? 'spinner' : 'file-pdf'" :class="{ 'animate-spin': gerandoPDF, 'w-4 h-4': true }" />
           <span>{{ gerandoPDF ? 'Gerando PDF...' : 'Exportar PDF' }}</span>
+        </button>
+
+        <!-- Botão Excel -->
+        <button
+          @click="gerarRelatorioExcel"
+          :disabled="!relatoriosFiltrados || relatoriosFiltrados.length === 0 || gerandoExcel"
+          class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:bg-muted disabled:text-muted-foreground rounded-lg transition-colors text-sm font-medium shadow-sm"
+        >
+          <font-awesome-icon :icon="gerandoExcel ? 'spinner' : 'file-excel'" :class="{ 'animate-spin': gerandoExcel, 'w-4 h-4': true }" />
+          <span>{{ gerandoExcel ? 'Gerando Excel...' : 'Exportar Excel' }}</span>
         </button>
       </div>
     </div>
@@ -418,8 +429,14 @@ const {
 // Usar o composable de PDF
 const { gerarPDF } = useRelatorioPDF()
 
+// Usar o composable de Excel
+const { gerarExcel } = useRelatorioExcel()
+
 // Estado para controle da geração do PDF
 const gerandoPDF = ref(false)
+
+// Estado para controle da geração do Excel
+const gerandoExcel = ref(false)
 
 // Estados reativos
 const filtros = ref<Filtros>({
@@ -720,6 +737,43 @@ async function gerarRelatorioPDF() {
     toast.error('Erro ao gerar PDF')
   } finally {
     gerandoPDF.value = false
+  }
+}
+
+// Função para gerar Excel
+async function gerarRelatorioExcel() {
+  if (!relatoriosFiltrados.value || relatoriosFiltrados.value.length === 0) {
+    const toast = await useToastSafe()
+    toast.warning('Nenhum dado para gerar Excel')
+    return
+  }
+
+  try {
+    gerandoExcel.value = true
+    
+    // Preparar dados dos filtros para o Excel (opcional para metadados)
+    const dadosFiltros = {
+      agente: filtrosDebounce.value.agenteOuContato,
+      cliente: filtrosDebounce.value.classificacao,
+      dataInicio: filtrosDebounce.value.dataInicial,
+      dataFim: filtrosDebounce.value.dataFinal
+    }
+    
+    // Gerar Excel com os dados filtrados
+    const resultado = await gerarExcel(relatoriosFiltrados.value, dadosFiltros)
+    
+    const toast = await useToastSafe()
+    if (resultado && resultado.success) {
+      toast.success(`Excel gerado com sucesso: ${resultado.nomeArquivo}`)
+    } else {
+      toast.error('Erro ao gerar Excel')
+    }
+  } catch (error) {
+    console.error('Erro ao gerar Excel:', error)
+    const toast = await useToastSafe()
+    toast.error('Erro ao gerar Excel')
+  } finally {
+    gerandoExcel.value = false
   }
 }
 
