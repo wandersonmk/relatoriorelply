@@ -16,9 +16,9 @@ export const useRelatorioPDF = () => {
       // Criar documento em orientação horizontal (paisagem)
       const doc = new jsPDF('landscape')
 
-      // Cabeçalho do relatório
+      // Cabeçalho do relatório - alinhado à esquerda
       doc.setFontSize(18)
-      doc.text('RELATÓRIO DE ATENDIMENTOS', 150, 20) // Centralizado na página horizontal
+      doc.text('RELATÓRIO DE ATENDIMENTOS', 15, 20) // Alinhado à esquerda
       
       doc.setFontSize(12)
       const dataGeracao = new Date().toLocaleDateString('pt-BR', {
@@ -30,8 +30,8 @@ export const useRelatorioPDF = () => {
         minute: '2-digit',
         second: '2-digit'
       })
-      doc.text(`Gerado em: ${dataGeracao}`, 150, 35) // Centralizado
-      doc.text(`Total de registros: ${dados.length}`, 150, 45) // Centralizado
+      doc.text(`Gerado em: ${dataGeracao}`, 15, 35) // Alinhado à esquerda
+      doc.text(`Total de registros: ${dados.length}`, 15, 45) // Alinhado à esquerda
       
       // Informações de filtros se houver
       let yPosition = 55
